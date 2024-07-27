@@ -1,0 +1,3455 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WebGL Hole Filling</title>
+    <script src="https://cdn.bootcss.com/three.js/r83/three.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r83/three.module.js"></script>
+    <script>
+      window.addEventListener("load", () => WebHF.init());
+    </script>
+    <meta content="Sebastian Dorn" name="author" />
+    <style>
+      @font-face {
+        font-family: "IconicFill Web";
+        font-style: normal;
+        font-weight: normal;
+        src: url("fonts/iconic/iconic_fill.eot?") format("eot"),
+          url("fonts/iconic/iconic_fill.woff") format("woff"),
+          url("fonts/iconic/iconic_fill.ttf") format("truetype"),
+          url("fonts/iconic/iconic_fill.svg#iconic") format("svg");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: normal;
+        font-weight: 300;
+        src: local("Open Sans Light"), local("OpenSans-Light"),
+          url("fonts/open-sans/open-sans-v17-latin-300.woff2") format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-300.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: italic;
+        font-weight: 300;
+        src: local("Open Sans Light Italic"), local("OpenSans-LightItalic"),
+          url("fonts/open-sans/open-sans-v17-latin-300italic.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-300italic.woff")
+            format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: normal;
+        font-weight: 400;
+        src: local("Open Sans Regular"), local("OpenSans-Regular"),
+          url("fonts/open-sans/open-sans-v17-latin-regular.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-regular.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: italic;
+        font-weight: 400;
+        src: local("Open Sans Italic"), local("OpenSans-Italic"),
+          url("fonts/open-sans/open-sans-v17-latin-italic.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-italic.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: normal;
+        font-weight: 600;
+        src: local("Open Sans SemiBold"), local("OpenSans-SemiBold"),
+          url("fonts/open-sans/open-sans-v17-latin-600.woff2") format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-600.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: italic;
+        font-weight: 600;
+        src: local("Open Sans SemiBold Italic"),
+          local("OpenSans-SemiBoldItalic"),
+          url("fonts/open-sans/open-sans-v17-latin-600italic.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-600italic.woff")
+            format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: normal;
+        font-weight: 700;
+        src: local("Open Sans Bold"), local("OpenSans-Bold"),
+          url("fonts/open-sans/open-sans-v17-latin-700.woff2") format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-700.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: italic;
+        font-weight: 700;
+        src: local("Open Sans Bold Italic"), local("OpenSans-BoldItalic"),
+          url("fonts/open-sans/open-sans-v17-latin-700italic.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-700italic.woff")
+            format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: normal;
+        font-weight: 800;
+        src: local("Open Sans ExtraBold"), local("OpenSans-ExtraBold"),
+          url("fonts/open-sans/open-sans-v17-latin-800.woff2") format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-800.woff") format("woff");
+      }
+
+      @font-face {
+        font-family: "Open Sans";
+        font-style: italic;
+        font-weight: 800;
+        src: local("Open Sans ExtraBold Italic"),
+          local("OpenSans-ExtraBoldItalic"),
+          url("fonts/open-sans/open-sans-v17-latin-800italic.woff2")
+            format("woff2"),
+          url("fonts/open-sans/open-sans-v17-latin-800italic.woff")
+            format("woff");
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        cursor: default;
+        height: 100%;
+      }
+
+      body {
+        background-color: #303030;
+        color: #f0f0f0;
+        font-family: "Open Sans", Helvetica, Arial, sans-serif;
+        font-size: 14px;
+      }
+
+      a {
+        border-bottom: 1px solid#80a7a1;
+        color: #98d9cf;
+        text-decoration: none;
+      }
+
+      a:hover {
+        border-bottom: 0;
+      }
+
+      canvas {
+        background-color: #ffffff;
+        background-image: -ms-linear-gradient(top, #e0e0e0, #ffffff);
+        background-image: -o-linear-gradient(top, #e0e0e0, #ffffff);
+        background-image: -webkit-linear-gradient(top, #e0e0e0, #ffffff);
+        background-image: linear-gradient(to bottom, #e0e0e0, #ffffff);
+        display: block;
+      }
+
+      #container {
+        background-color: #ffffff;
+        display: block;
+      }
+
+      fieldset {
+        border: 0;
+      }
+
+      p {
+        margin-bottom: 8px;
+      }
+
+      ol,
+      ul {
+        list-style-type: none;
+      }
+
+      label {
+        font-weight: normal;
+      }
+
+      canvas,
+      legend {
+        -moz-user-select: none;
+        -ms-user-select: none;
+        -o-user-select: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      progress {
+        background-color: #505050;
+        background-image: -moz-linear-gradient(top, #404040, #505050);
+        background-image: linear-gradient(to bottom, #404040, #505050);
+        border: 1px solid#101010;
+        border-radius: 1px;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        height: 14px;
+        width: 100%;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      progress::-webkit-progress-bar {
+        background-color: #505050;
+        background-image: -webkit-linear-gradient(top, #404040, #505050);
+        background-image: linear-gradient(to bottom, #404040, #505050);
+      }
+
+      progress::-moz-progress-bar {
+        background-color: #96e835;
+        background-image: -moz-linear-gradient(bottom, #7fc72b, #96e835);
+        background-image: linear-gradient(to top, #7fc72b, #96e835);
+        box-shadow: 0 0 10px 0 rgba(105, 159, 226, 0.4);
+      }
+
+      progress::-webkit-progress-value {
+        background-color: #96e835;
+        background-image: -webkit-linear-gradient(bottom, #7fc72b, #96e835);
+        background-image: linear-gradient(to top, #7fc72b, #96e835);
+        box-shadow: 0 0 10px 0 rgba(105, 159, 226, 0.4);
+      }
+
+      .tools,
+      .details {
+        background-color: #303030;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        display: block;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        width: 61px;
+        z-index: 500;
+      }
+
+      .tools {
+        border-right: 1px solid#404040;
+        left: 0;
+      }
+
+      .tool p:last-child {
+        margin-bottom: 0;
+      }
+
+      .tool,
+      .detail {
+        height: 60px;
+        margin-top: 1px;
+        position: relative;
+        width: 100%;
+      }
+
+      .tools fieldset {
+        background-color: #333748;
+        border-bottom-right-radius: 2px;
+        border-top-right-radius: 2px;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        display: none;
+        left: 60px;
+        padding: 50px 16px 16px;
+        position: absolute;
+        max-width: 600px;
+        min-height: 60px;
+        min-width: 200px;
+        z-index: 110;
+      }
+
+      .tools legend {
+        background-color: #101010;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        font-weight: bold;
+        left: 0;
+        padding: 8px 16px;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+
+      .tool:hover fieldset {
+        display: block;
+      }
+
+      hr {
+        border: 0;
+        border-bottom: 1px solid#101010;
+        display: block;
+        margin: 10px 0;
+      }
+
+      .tool section {
+        border-bottom: 1px solid#101010;
+        display: block;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+      }
+
+      .tool section:last-of-type {
+        border-bottom: 0;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .description {
+        display: inline-block;
+        margin-left: 8px;
+      }
+
+      .details {
+        border-left: 1px solid#404040;
+        right: 0;
+        width: 200px;
+        z-index: 450;
+      }
+
+      .detail {
+        height: auto;
+        margin: 0 0 16px;
+      }
+
+      .detail.caption {
+        background-color: #101010;
+        border: 1px solid#404040;
+        border-left: 0;
+        border-right: 0;
+        display: block;
+        font-weight: bold;
+        padding: 6px 16px;
+      }
+
+      .detail.number {
+        background-color: #2d90ea;
+        display: inline-block;
+        margin-left: 6px;
+        padding: 0 4px;
+      }
+
+      .detail fieldset {
+        padding: 10px;
+      }
+
+      .detail input[type="number"] {
+        margin-bottom: 10px;
+      }
+
+      .detail.info {
+        background-color: #101010;
+        border: 0;
+        border-radius: 1px;
+        color: #ffffff;
+        display: inline-block;
+        margin-right: 4px;
+        padding: 1px 4px;
+        text-align: center;
+      }
+
+      .tool-about,
+      .tool-light,
+      .tool-render {
+        white-space: nowrap;
+      }
+
+      .icon {
+        background-color: #101010;
+        color: #ffffff;
+        display: block;
+        font-family: "IconicFill Web";
+        font-size: 24px;
+        height: 60px;
+        left: 0;
+        line-height: 60px;
+        position: absolute;
+        text-align: center;
+        top: 0;
+        width: 100%;
+      }
+
+      .icon-about::before {
+        content: "\2139";
+      }
+
+      .icon-close::before {
+        content: "\2714";
+      }
+
+      .icon-controls::before {
+        content: "\e024";
+      }
+
+      .icon-edit::before {
+        content: "\e005";
+      }
+
+      .icon-export::before {
+        content: "\2935";
+      }
+
+      .icon-import::before {
+        content: "\e065";
+      }
+
+      .icon-light::before {
+        content: "\e063";
+      }
+
+      .icon-render::before {
+        content: "\e025";
+      }
+
+      input,
+      select,
+      textarea {
+        background-color: #ffffff;
+        border: 1px solid#d0d0d0;
+        border-radius: 1px;
+        color: #000000;
+        font-family: "OpenSans Web", "Open Sans", Helvetica, Arial, sans-serif;
+        font-size: 100%;
+      }
+
+      input[type="checkbox"],
+      input[type="range"] {
+        margin-right: 4px;
+        vertical-align: middle;
+      }
+
+      input[type="number"] {
+        background-color: #101010;
+        border: 1px solid#101010;
+        border-radius: 2px;
+        color: #ffffff;
+        padding: 2px 4px;
+        text-align: right;
+        width: 50px;
+      }
+
+      input[type="radio"].newradio {
+        display: none;
+      }
+
+      input[type="radio"].newradio:checked + label.newradio,
+      .button {
+        background-color: #404040;
+        background-image: -ms-linear-gradient(top, #606060, #404040);
+        background-image: -o-linear-gradient(top, #606060, #404040);
+        background-image: -webkit-linear-gradient(top, #606060, #404040);
+        background-image: linear-gradient(to bottom, #606060, #404040);
+        color: #ffffff;
+      }
+
+      label.newradio {
+        background-color: #101010;
+        border: 1px solid#101010;
+        border-left-color: #303030;
+        border-right: 0;
+        color: #b0b0b0;
+        display: inline-block;
+        margin-right: -4px;
+        padding: 6px 16px;
+      }
+
+      label.newradio:hover {
+        color: #ffffff;
+      }
+
+      label.newradio:first-of-type {
+        border-left-color: #101010;
+        border-bottom-left-radius: 3px;
+        border-top-left-radius: 3px;
+      }
+
+      label.newradio:last-of-type {
+        border-right: 1px solid#101010;
+        border-bottom-right-radius: 3px;
+        border-top-right-radius: 3px;
+        margin-right: 0;
+      }
+
+      .button {
+        border: 1px solid#101010;
+        border-radius: 3px;
+        display: inline-block;
+        padding: 8px 16px;
+      }
+
+      .button:hover {
+        border-color: #b0b0b0;
+      }
+
+      .button:active {
+        background-color: #606060;
+        background-image: -ms-linear-gradient(top, #404040, #606060);
+        background-image: -o-linear-gradient(top, #404040, #606060);
+        background-image: -webkit-linear-gradient(top, #404040, #606060);
+        background-image: linear-gradient(to bottom, #404040, #606060);
+        color: #000000;
+      }
+
+      .button.disabled {
+        opacity: 0.5;
+      }
+
+      .textinput {
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        border: 0;
+        font-size: 100%;
+        padding: 2px 4px;
+        width: 100%;
+      }
+
+      .selectContainer {
+        border: 1px solid#606060;
+        border-radius: 1px;
+        max-height: 110px;
+        overflow-y: auto;
+        position: relative;
+        width: 100%;
+      }
+
+      .selectContainer input {
+        background-color: #101010;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        border: 0;
+        color: #ffffff;
+        margin-bottom: 1px;
+        padding: 6px 0;
+        text-align: center;
+        width: 100%;
+      }
+
+      .selectContainer input:last-child {
+        margin-bottom: 0;
+      }
+
+      .selectContainer input:hover,
+      .selectContainer.active,
+      .message {
+        background-color: #2d90ea;
+        background-image: -ms-linear-gradient(bottom, #1f78ca, #2d90ea);
+        background-image: -o-linear-gradient(bottom, #1f78ca, #2d90ea);
+        background-image: -webkit-linear-gradient(bottom, #1f78ca, #2d90ea);
+        background-image: linear-gradient(to top, #1f78ca, #2d90ea);
+      }
+
+      .foundHole,
+      .foundPoint {
+        border-left-style: solid !important;
+        border-left-width: 4px !important;
+        display: block;
+        padding-left: 0 !important;
+        padding-right: 4px !important;
+      }
+
+      .foundHole.filled,
+      .foundPoint.removed {
+        opacity: 0.5;
+      }
+
+      .message {
+        border-radius: 2px;
+        margin: 0;
+        padding: 1px 4px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar:horizontal {
+        height: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background-color: #303030;
+        border-radius: 12px;
+        box-shadow: inset 0 0 6px 0 rgba(0, 0, 0, 0.5);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: #808080;
+        border-radius: 12px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background-color: #b0b0b0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="container"></div>
+    <ul class="tools">
+      <!--empty-->
+      <li class="tool tool-empty"></li>
+      <!--import-->
+      <li class="tool tool-import">
+        <span class="icon icon-import"></span>
+        <fieldset>
+          <legend>Import</legend>
+          <section><input id="import_file" type="file" /></section>
+        </fieldset>
+      </li>
+      <!--rendering-->
+      <li class="tool tool-render">
+        <span class="icon icon-render"></span>
+        <fieldset>
+          <legend>Renderer</legend>
+          <section>
+            <input
+              class="newradio"
+              id="render_solid_model"
+              name="render_mode_model"
+              type="radio"
+              value="solid"
+            /><label class="newradio" for="render_solid_model">Solid</label
+            ><input
+              class="newradio"
+              id="render_wireframe_model"
+              name="render_mode_model"
+              type="radio"
+              value="wireframe"
+            /><label class="newradio" for="render_wireframe_model"
+              >Wireframe</label
+            ><span class="description">Model</span>
+          </section>
+          <section>
+            <input
+              class="newradio"
+              id="render_solid_filling"
+              name="render_mode_filling"
+              type="radio"
+              value="solid"
+            /><label class="newradio" for="render_solid_filling">Solid</label
+            ><input
+              class="newradio"
+              id="render_wireframe_filling"
+              name="render_mode_filling"
+              type="radio"
+              value="wireframe"
+            /><label class="newradio" for="render_wireframe_filling"
+              >Wireframe</label
+            ><span class="description">Filling</span>
+          </section>
+          <section>
+            <input
+              class="newradio"
+              id="shading_flat"
+              name="shading"
+              type="radio"
+              value="flat"
+            /><label class="newradio" for="shading_flat">Flat</label
+            ><input
+              class="newradio"
+              id="shading_phong"
+              name="shading"
+              type="radio"
+              value="phong"
+            /><label class="newradio" for="shading_phong">Phong</label
+            ><span class="description">Shading</span>
+          </section>
+          <section>
+            <input
+              class="button"
+              id="controls_reset"
+              type="button"
+              value="Reset camera"
+            />
+          </section>
+        </fieldset>
+      </li>
+      <!--lighting-->
+      <li class="tool tool-light">
+        <span class="icon icon-light"></span>
+        <fieldset>
+          <legend>Lighting</legend>
+          <section id="light_ambient">
+            <input
+              checked=""
+              class="newradio"
+              id="light_ambient_on"
+              name="light_ambient"
+              type="radio"
+              value="on"
+            /><label class="newradio" for="light_ambient_on">On</label
+            ><input
+              class="newradio"
+              id="light_ambient_off"
+              name="light_ambient"
+              type="radio"
+              value="off"
+            /><label class="newradio" for="light_ambient_off">Off</label
+            ><span class="description">Ambient</span>
+          </section>
+          <section id="light_camera">
+            <input
+              checked=""
+              class="newradio"
+              id="light_camera_on"
+              name="light_camera"
+              type="radio"
+              value="on"
+            /><label class="newradio" for="light_camera_on">On</label
+            ><input
+              class="newradio"
+              id="light_camera_off"
+              name="light_camera"
+              type="radio"
+              value="off"
+            /><label class="newradio" for="light_camera_off">Off</label
+            ><span class="description">Camera</span>
+          </section>
+          <section id="light_directional">
+            <input
+              checked=""
+              class="newradio"
+              id="light_directional_on"
+              name="light_directional"
+              type="radio"
+              value="on"
+            /><label class="newradio" for="light_directional_on">On</label
+            ><input
+              class="newradio"
+              id="light_directional_off"
+              name="light_directional"
+              type="radio"
+              value="off"
+            /><label class="newradio" for="light_directional_off">Off</label
+            ><span class="description">Directional</span>
+          </section>
+        </fieldset>
+      </li>
+      <!--edit-->
+      <li class="tool tool-edit">
+        <span class="icon icon-edit"></span>
+        <fieldset>
+          <legend>Edit model</legend>
+          <section>
+            <input
+              class="button"
+              id="edit_findedges"
+              type="button"
+              value="Find holes"
+            />
+          </section>
+        </fieldset>
+      </li>
+      <!--export-->
+      <li class="tool tool-export">
+        <span class="icon icon-export"></span>
+        <fieldset>
+          <legend>Export</legend>
+          <section>
+            <input
+              class="button"
+              id="export_options"
+              type="button"
+              value="Show options"
+            />
+          </section>
+        </fieldset>
+      </li>
+      <!--empty-->
+      <li class="tool tool-empty"></li>
+      <!--about-->
+      <li class="tool tool-about">
+        <span class="icon icon-about"></span>
+        <fieldset>
+          <legend>About</legend>
+          <p>WebGL Framework:<a href="https://threejs.org/">three.js</a></p>
+          <p>
+            Icons:<a href="http://somerandomdude.com/work/iconic/">Iconic</a>
+          </p>
+          <p>Font:<a href="https://opensans.com/">Open Sans</a></p>
+        </fieldset>
+      </li>
+    </ul>
+    <!--details for tools-->
+    <div class="details" id="details">
+      <!--details for hole filling-->
+      <ul class="details-collection details-holefilling" hidden="">
+        <!--found holes-->
+        <li class="detail detail-foundholes">
+          <div class="caption">Found Holes</div>
+          <fieldset>
+            <p class="message" hidden="">No holes found.</p>
+            <div class="selectContainer foundHoles"></div>
+          </fieldset>
+        </li>
+        <!--hole information-->
+        <li class="detail detail-holeinfo">
+          <div class="caption">Hole Information</div>
+          <fieldset>
+            <span class="info" id="holeinfo-vertices">-</span
+            ><label>Front vertices</label>
+          </fieldset>
+        </li>
+        <!--collision test-->
+        <li class="detail detail-collision">
+          <div class="caption">Collision Test</div>
+          <fieldset>
+            <section hidden="">
+              <input
+                id="collision-worker"
+                min="1"
+                step="1"
+                type="number"
+                value="1"
+              /><label for="collision-worker" title="Number of worker processes"
+                >Web Worker</label
+              >
+            </section>
+            <section>
+              <input
+                class="newradio"
+                id="collision_test_filling"
+                name="collision_test"
+                type="radio"
+                value="filling"
+              /><label class="newradio" for="collision_test_filling"
+                >Filling</label
+              ><input
+                class="newradio"
+                id="collision_test_all"
+                name="collision_test"
+                type="radio"
+                value="all"
+              /><label class="newradio" for="collision_test_all">All</label>
+            </section>
+          </fieldset>
+        </li>
+        <!--fill hole-->
+        <li class="detail detail-fillhole">
+          <div class="caption">Fill Hole<span class="number">-</span></div>
+          <fieldset>
+            <section>
+              <input
+                id="merge-threshold"
+                min="0.001"
+                step="0.01"
+                type="number"
+              /><label
+                for="merge-threshold"
+                title="Distance threshold for two vertices before they are merged."
+                >Merging</label
+              >
+            </section>
+            <section>
+              <input
+                class="button disabled fillholeStart"
+                type="button"
+                value="Advancing Front"
+              />
+            </section>
+          </fieldset>
+        </li>
+        <!--progress-->
+        <li class="detail detail-fillprogress">
+          <div class="caption">Progress</div>
+          <fieldset></fieldset>
+        </li>
+      </ul>
+      <!--details for export-->
+      <ul class="details-collection details-export" hidden="">
+        <!--format-->
+        <li class="detail detail-exportformat">
+          <div class="caption">Format</div>
+          <fieldset></fieldset>
+        </li>
+        <!--name-->
+        <li class="detail detail-exportname">
+          <div class="caption">Name</div>
+          <fieldset>
+            <input class="textinput" id="export_name" type="text" />
+          </fieldset>
+        </li>
+        <!--export-->
+        <li class="detail detail-export">
+          <div class="caption">Export</div>
+          <fieldset>
+            <input class="button" type="button" value="Export" />
+          </fieldset>
+        </li>
+        <!--progress-->
+        <li class="detail detail-exportprogress">
+          <div class="caption">Progress</div>
+          <fieldset></fieldset>
+        </li>
+      </ul>
+    </div>
+    <script>
+      "use strict";
+      const CONFIG = {
+        ALLOWED_FILE_EXTENSIONS: ["obj", "ply", "stl", "vtk"],
+        AXIS: { SHOW: false, SIZE: 60 },
+        BBOX: { COLOR: 0x37fefe, SHOW: false },
+        CAMERA: {
+          ANGLE: 45,
+          FOCUS: { DISTANCE_FACTOR: 1.8, STEPS: 0, TIMEOUTS: 30 },
+          ZFAR: 2500,
+          ZNEAR: 0.01,
+        },
+        CHECK_AND_FIX_FACES: true,
+        CONTROLS: { PAN_SPEED: 0.8, ROT_SPEED: 1.5, ZOOM_SPEED: 2.0 },
+        DEBUG: {
+          AF_INVALIDATE_CACHE: true,
+          AF_STOP_AFTER_ITER: 2000,
+          ENABLE_STOPWATCH: false,
+          SHOW_FRONT: false,
+          SHOW_MERGING: false,
+        },
+        EXPORT: { DEFAULT_FORMAT: "STL", FORMATS: ["OBJ", "STL"] },
+        FILLING: {
+          AF_MODE: "iterative",
+          COLLISION_TEST: "filling",
+          COLOR: 0x87c3ec,
+          LINE_WIDTH: 2,
+          PROGRESS_UPDATE: 4,
+          SHOW_WIREFRAME: false,
+          THRESHOLD_VARIANCE: 0.05,
+          WORKER: 4,
+        },
+        HOLES: {
+          COLOR: [0xff0000, 0xe227bd, 0xffa420, 0x38f221],
+          LINE_WIDTH: 3,
+          SHOW_LINES: true,
+          SHOW_POINTS: false,
+        },
+        LIGHTS: {
+          AMBIENT: [{ color: 0x101016 }],
+          CAMERA: [{ color: 0xffffff, intensity: 0.8 }],
+          DIRECTIONAL: [],
+        },
+        MODE: "solid",
+        RENDERER: { alpha: true, antialias: true, maxLights: 4 },
+        SHADING: "flat",
+      };
+      (function () {
+        const OPTIONS_AF_MODE = ["iterative", "parallel", "responsive"];
+        const OPTIONS_COLLISION_TEST = ["all", "filling"];
+        const OPTIONS_MODE = ["solid", "wireframe"];
+        const OPTIONS_SHADING = ["flat", "phong"];
+        if (OPTIONS_AF_MODE.indexOf(CONFIG.FILLING.AF_MODE) < 0) {
+          console.error(
+            `CONFIG.FILLING.AF_MODE:Unknown setting[${CONFIG.FILLING.AF_MODE}].`
+          );
+        }
+        if (OPTIONS_COLLISION_TEST.indexOf(CONFIG.FILLING.COLLISION_TEST) < 0) {
+          console.error(
+            `CONFIG.FILLING.COLLISION_TEST:Unknown setting[${CONFIG.FILLING.COLLISION_TEST}].`
+          );
+        }
+        if (OPTIONS_MODE.indexOf(CONFIG.MODE) < 0) {
+          console.error(`CONFIG.MODE:Unknown setting[${CONFIG.MODE}].`);
+        }
+        if (OPTIONS_SHADING.indexOf(CONFIG.SHADING) < 0) {
+          console.error(`CONFIG.SHADING:Unknown setting[${CONFIG.SHADING}].`);
+        }
+        if (CONFIG.ALLOWED_FILE_EXTENSIONS.length === 0) {
+          console.warn(
+            "CONFIG.ALLOWED_FILE_EXTENSIONS: If no file extensions are allowed, it won't be possible to import anything."
+          );
+        }
+        if (CONFIG.HOLES.COLOR.length === 0) {
+          console.warn("CONFIG.HOLES.COLOR: No colors set.");
+        }
+        if (
+          CONFIG.LIGHTS.CAMERA.length === 0 &&
+          CONFIG.LIGHTS.DIRECTIONAL.length === 0
+        ) {
+          console.warn(
+            "CONFIG.LIGHTS: No camera and/or directional light(s) set, you won't see much details."
+          );
+        }
+        if (CONFIG.EXPORT.FORMATS.length === 0) {
+          console.warn(
+            "CONFIG.EXPORT.FORMATS: If no export formats are specified, it won't be possible to export a model."
+          );
+        }
+      })();
+    </script>
+    <script>
+      "use strict";
+      const WebHF = {
+        camera: null,
+        controls: null,
+        lights: { ambient: [], camera: [], directional: [] },
+        renderer: null,
+        init() {
+          const container = document.getElementById("container");
+          this.loadChosenAdvancingFrontFile();
+          this.UI.init();
+          this._initCamera();
+          this.SceneManager.init();
+          this._initLights();
+          this._initRenderer(container);
+          this._initControls(container, () => {
+            this.animate();
+            this.render();
+          });
+        },
+        _initCamera() {
+          const cc = CONFIG.CAMERA;
+          WebHF.camera = new THREE.PerspectiveCamera(
+            cc.ANGLE,
+            window.innerWidth / window.innerHeight,
+            cc.ZNEAR,
+            cc.ZFAR
+          );
+          WebHF.camera.position.x = 10;
+          WebHF.camera.position.y = 10;
+          WebHF.camera.position.z = 10;
+        },
+        _initControls(container, cb) {
+          const cc = CONFIG.CONTROLS;
+          const proceed = (module) => {
+            WebHF.controls = new module.TrackballControls(
+              WebHF.camera,
+              container
+            );
+            WebHF.controls.rotateSpeed = cc.ROT_SPEED;
+            WebHF.controls.zoomSpeed = cc.ZOOM_SPEED;
+            WebHF.controls.panSpeed = cc.PAN_SPEED;
+            WebHF.controls.noZoom = false;
+            WebHF.controls.noPan = false;
+            WebHF.controls.staticMoving = true;
+            WebHF.controls.dynamicDampingFactor = 0.3;
+            WebHF.controls.addEventListener(
+              "change",
+              this.SceneManager.moveCameraLights
+            );
+            WebHF.controls.addEventListener("change", WebHF.render);
+            cb();
+          };
+          import(
+            "https://unpkg.com/three@0.106.2/examples/jsm/controls/TrackballControls.js"
+          ).then(proceed);
+        },
+        _initLights() {
+          const d = document;
+          const LIGHTS = CONFIG.LIGHTS;
+          const scene = this.SceneManager.scene;
+          if (LIGHTS.AMBIENT.length == 0) {
+            const sectionAmbient = d.getElementById("light_ambient");
+            sectionAmbient.parentNode.removeChild(sectionAmbient);
+          }
+          for (let i = 0; i < LIGHTS.AMBIENT.length; i++) {
+            const ambient = new THREE.AmbientLight(LIGHTS.AMBIENT[i].color);
+            WebHF.lights.ambient.push(ambient);
+            scene.add(ambient);
+          }
+          if (LIGHTS.CAMERA.length == 0) {
+            const sectionCamera = d.getElementById("light_camera");
+            sectionCamera.parentNode.removeChild(sectionCamera);
+          }
+          for (let i = 0; i < LIGHTS.CAMERA.length; i++) {
+            const lDir = LIGHTS.CAMERA[i];
+            const directional = new THREE.DirectionalLight(
+              lDir.color,
+              lDir.intensity
+            );
+            WebHF.lights.camera.push(directional);
+            scene.add(directional);
+          }
+          if (LIGHTS.DIRECTIONAL.length == 0) {
+            const sectionDirectional = d.getElementById("light_directional");
+            sectionDirectional.parentNode.removeChild(sectionDirectional);
+          }
+          for (let i = 0; i < LIGHTS.DIRECTIONAL.length; i++) {
+            const lDir = LIGHTS.DIRECTIONAL[i];
+            const directional = new THREE.DirectionalLight(
+              lDir.color,
+              lDir.intensity
+            );
+            directional.position.set(
+              lDir.position[0],
+              lDir.position[1],
+              lDir.position[2]
+            );
+            WebHF.lights.directional.push(directional);
+            scene.add(directional);
+          }
+        },
+        _initRenderer(container) {
+          WebHF.renderer = new THREE.WebGLRenderer(CONFIG.RENDERER);
+          WebHF.renderer.setSize(window.innerWidth, window.innerHeight);
+          container.appendChild(WebHF.renderer.domElement);
+        },
+        animate() {
+          requestAnimationFrame(WebHF.animate);
+          WebHF.controls.update();
+        },
+        loadChosenAdvancingFrontFile() {
+          const script = document.createElement("script");
+          script.src = `js/AdvancingFront-${CONFIG.FILLING.AF_MODE}.js`;
+          if (CONFIG.DEBUG.AF_INVALIDATE_CACHE) {
+            script.src += "?uncache=" + Date.now();
+          }
+          document.head.appendChild(script);
+        },
+        render() {
+          WebHF.renderer.render(WebHF.SceneManager.scene, WebHF.camera);
+        },
+        resize() {
+          if (WebHF.camera) {
+            WebHF.camera.aspect = window.innerWidth / window.innerHeight;
+            WebHF.camera.updateProjectionMatrix();
+          }
+          if (WebHF.renderer) {
+            WebHF.renderer.setSize(window.innerWidth, window.innerHeight);
+            WebHF.render();
+          }
+        },
+      };
+      ("use strict");
+      WebHF.Utils = {
+        calculateAngle(vp, v, vn, move) {
+          const vpClone = vp.clone().sub(v);
+          const vnClone = vn.clone().sub(v);
+          const vClone = v.clone();
+          if (typeof move === "undefined") {
+            move = new THREE.Vector3();
+          }
+          vClone.add(move);
+          let angle = THREE.Math.radToDeg(vpClone.angleTo(vnClone));
+          const c = new THREE.Vector3()
+            .crossVectors(vpClone, vnClone)
+            .normalize();
+          c.add(v).add(move);
+          if (c.length() < vClone.length()) {
+            angle = 360.0 - angle;
+          }
+          return angle;
+        },
+        calculateAngleAverage(gv, modelPos) {
+          let angleAverage = 0.0;
+          for (let i = 0; i < gv.length; i++) {
+            const vp = gv[i == 0 ? gv.length - 1 : i - 1];
+            const v = gv[i];
+            const vn = gv[(i + 1) % gv.length];
+            angleAverage += WebHF.Utils.calculateAngle(vp, v, vn, modelPos);
+          }
+          angleAverage /= gv.length;
+          return angleAverage;
+        },
+        calculateVariances(vectors) {
+          const x = [];
+          const y = [];
+          const z = [];
+          let averageX = 0;
+          let averageY = 0;
+          let averageZ = 0;
+          let varianceX = 0;
+          let varianceY = 0;
+          let varianceZ = 0;
+          const len = vectors.length;
+          for (let i = 0; i < len; i++) {
+            const v = vectors[i];
+            x.push(v.x);
+            y.push(v.y);
+            z.push(v.z);
+            averageX += v.x;
+            averageY += v.y;
+            averageZ += v.z;
+          }
+          averageX /= len + 1;
+          averageY /= len + 1;
+          averageZ /= len + 1;
+          for (let i = 0; i < len; i++) {
+            varianceX += Math.pow(x[i] - averageX, 2);
+            varianceY += Math.pow(y[i] - averageY, 2);
+            varianceZ += Math.pow(z[i] - averageZ, 2);
+          }
+          varianceX /= len;
+          varianceY /= len;
+          varianceZ /= len;
+          return {
+            x: varianceX,
+            y: varianceY,
+            z: varianceZ,
+            average: { x: averageX, y: averageY, z: averageZ },
+          };
+        },
+        checkIntersectionOfLines2D(p1, p2, q1, q2) {
+          let s = (q2.x - q1.x) * (p1.y - q1.y) - (q2.y - q1.y) * (p1.x - q1.x);
+          s /= (q2.y - q1.y) * (p2.x - p1.x) - (q2.x - q1.x) * (p2.y - p1.y);
+          let t = (p2.x - p1.x) * (p1.y - q1.y) - (p2.y - p1.y) * (p1.x - q1.x);
+          t /= (q2.y - q1.y) * (p2.x - p1.x) - (q2.x - q1.x) * (p2.y - p1.y);
+          return s > 0 && s < 1 && t > 0 && t < 1;
+        },
+        checkIntersectionOfTriangles2D(a, b, c, fromA, fromB, v) {
+          if (this.checkIntersectionOfLines2D(a, b, fromA, v)) {
+            return true;
+          }
+          if (this.checkIntersectionOfLines2D(a, b, fromB, v)) {
+            return true;
+          }
+          if (this.checkIntersectionOfLines2D(b, c, fromA, v)) {
+            return true;
+          }
+          if (this.checkIntersectionOfLines2D(b, c, fromB, v)) {
+            return true;
+          }
+          if (this.checkIntersectionOfLines2D(c, a, fromA, v)) {
+            return true;
+          }
+          if (this.checkIntersectionOfLines2D(c, a, fromB, v)) {
+            return true;
+          }
+          return false;
+        },
+        checkIntersectionOfTriangles3D(a, b, c, p, fromA, fromB) {
+          const planeOfTriangle = new WebHF.Plane(a, b, c);
+          const test = [fromA];
+          const u = b.clone().sub(a);
+          const v = c.clone().sub(a);
+          const uDotU = u.dot(u);
+          const uDotV = u.dot(v);
+          const vDotV = v.dot(v);
+          const d = uDotV * uDotV - uDotU * vDotV;
+          if (fromB) {
+            test.push(fromB);
+          }
+          for (let i = 0; i < test.length; i++) {
+            const r = planeOfTriangle.getIntersection(test[i], p);
+            if (!r) {
+              continue;
+            }
+            const w = r.clone().sub(a);
+            const wDotV = w.dot(v);
+            const wDotU = w.dot(u);
+            let s = uDotV * wDotV - vDotV * wDotU;
+            s /= d;
+            let t = uDotV * wDotU - uDotU * wDotV;
+            t /= d;
+            if (s >= 0 && s <= 1 && t >= 0 && t <= 1 && s + t <= 1) {
+              return true;
+            }
+          }
+          return false;
+        },
+        decreaseHigherFaceIndexes(faces, i, cmpIndex) {
+          const face = faces[i];
+          if (face.a > cmpIndex) {
+            face.a--;
+          }
+          if (face.b > cmpIndex) {
+            face.b--;
+          }
+          if (face.c > cmpIndex) {
+            face.c--;
+          }
+          if (face.a == face.b || face.a == face.c || face.b == face.c) {
+            faces.splice(i, 1);
+          }
+          return faces;
+        },
+        floatToScientific(value) {
+          const splitted = value.toString(10).split(".");
+          let a = splitted[0];
+          let b = splitted[1];
+          let exp = 0;
+          let expSign = "+";
+          let sign = "";
+          if (!b) {
+            b = "";
+          } else if (b.length > 6) {
+            b = b.substr(0, 6);
+          }
+          if (a[0] === "-") {
+            a = a.substr(1);
+            sign = "-";
+          }
+          if (a == "0") {
+            exp--;
+            while (b.length > 0 && b[0] == "0") {
+              exp--;
+              b = b.substr(1);
+            }
+          } else {
+            exp = a.length - 1;
+          }
+          if (exp < 0) {
+            a = b[0];
+            b = b.substr(1);
+            expSign = "";
+          } else {
+            b = a.substr(1) + b;
+            a = a[0];
+          }
+          if (b == "") {
+            b = "0";
+          }
+          return sign + a + "." + b + "e" + expSign + exp;
+        },
+        getAverageLength(vectors) {
+          let length = 0.0;
+          for (let i = 0; i < vectors.length; i++) {
+            length += vectors[i].length();
+          }
+          return length / vectors.length;
+        },
+        getBoundingBox(geometries) {
+          let g = geometries[0];
+          const bbox = {
+            min: new THREE.Vector3(g.x, g.y, g.z),
+            max: new THREE.Vector3(g.x, g.y, g.z),
+          };
+          for (let i = 1, len = geometries.length; i < len; i++) {
+            g = geometries[i];
+            bbox.min.x = g.x < bbox.min.x ? g.x : bbox.min.x;
+            bbox.min.y = g.y < bbox.min.y ? g.y : bbox.min.y;
+            bbox.min.z = g.z < bbox.min.z ? g.z : bbox.min.z;
+            bbox.max.x = g.x > bbox.max.x ? g.x : bbox.max.x;
+            bbox.max.y = g.y > bbox.max.y ? g.y : bbox.max.y;
+            bbox.max.z = g.z > bbox.max.z ? g.z : bbox.max.z;
+          }
+          bbox.center = new THREE.Vector3(
+            (bbox.min.x + bbox.max.x) / 2,
+            (bbox.min.y + bbox.max.y) / 2,
+            (bbox.min.z + bbox.max.z) / 2
+          );
+          return bbox;
+        },
+        isPointInTriangle(p, a, b, c) {
+          return (
+            this.isSameSide(p, a, b, c) &&
+            this.isSameSide(p, b, a, c) &&
+            this.isSameSide(p, c, a, b)
+          );
+        },
+        isSameSide(p1, p2, a, b) {
+          const bClone = b.clone().sub(a);
+          const cp1 = new THREE.Vector3().crossVectors(
+            bClone,
+            p1.clone().sub(a)
+          );
+          const cp2 = new THREE.Vector3().crossVectors(
+            bClone,
+            p2.clone().sub(a)
+          );
+          return cp1.dot(cp2) >= 0;
+        },
+        keepNearPlane(vNew, vectors, mergeThreshold) {
+          const newV = vNew.clone();
+          const variance = WebHF.Utils.calculateVariances(vectors);
+          if (variance.x < variance.y) {
+            if (variance.x < variance.z) {
+              if (variance.x < mergeThreshold) {
+                newV.x = variance.average.x;
+              }
+            } else {
+              if (variance.z < mergeThreshold) {
+                newV.z = variance.average.z;
+              }
+            }
+          } else {
+            if (variance.y < variance.z) {
+              if (variance.y < mergeThreshold) {
+                newV.y = variance.average.y;
+              }
+            } else {
+              if (variance.z < mergeThreshold) {
+                newV.z = variance.average.z;
+              }
+            }
+          }
+          return newV;
+        },
+        selfRemoveFromDOM(ev) {
+          ev.target.parentNode.removeChild(ev.target);
+        },
+      };
+      ("use strict");
+      WebHF.UI = {
+        callbackExport: null,
+        callbackFillHole: null,
+        domDetails: null,
+        fillButton: null,
+        visibleProgress: null,
+        changeExportName(ev) {
+          const format = ev.target.value.toLowerCase();
+          const textInput = document.getElementById("export_name");
+          const nameParts = textInput.value.split(".");
+          textInput.value = textInput.value.replace(
+            nameParts[nameParts.length - 1],
+            format
+          );
+        },
+        checkHoleFinished(index) {
+          const holesSelect = this.domDetails.querySelector(".foundHoles");
+          for (let i = holesSelect.childNodes.length - 1; i >= 0; i--) {
+            const holeBtn = holesSelect.childNodes[i];
+            if (holeBtn.getAttribute("data-index") == index) {
+              holeBtn.className += " filled";
+              break;
+            }
+          }
+        },
+        cleanOfChildNodes(node) {
+          for (let i = node.childNodes.length - 1; i >= 0; i--) {
+            node.removeChild(node.childNodes[i]);
+          }
+          return node;
+        },
+        disableFillButton() {
+          if (this.fillButton.className.indexOf(" disabled") < 0) {
+            this.fillButton.removeEventListener("click", this.callbackFillHole);
+            this.fillButton.className += " disabled";
+          }
+        },
+        dragoverOfImport: function (ev) {
+          ev.preventDefault();
+          ev.dataTransfer.dropEffect = "copy";
+        },
+        hideAllDetails: function () {
+          const details = this.domDetails.querySelectorAll(
+            ".details-collection"
+          );
+          for (let i = details.length - 1; i >= 0; i--) {
+            details[i].setAttribute("hidden", "hidden");
+          }
+        },
+        init() {
+          this.domDetails = document.getElementById("details");
+          this.callbackExport = this.startExport.bind(
+            this.domDetails.querySelector(".details-export")
+          );
+          this.callbackFillHole = WebHF.SceneManager.fillHole.bind(
+            WebHF.SceneManager
+          );
+          this.fillButton = document.querySelector(".fillholeStart");
+          this.syncInterfaceWithConfig();
+          this.REGISTER.registerEvents();
+        },
+        resetInterface: function () {
+          this.hideAllDetails();
+          this.visibleProgress = null;
+        },
+        selectHole(ev) {
+          const children = ev.target.parentNode.childNodes;
+          const detailFillHole =
+            this.domDetails.querySelector(".detail-fillhole");
+          const detailHoleInfo =
+            this.domDetails.querySelector(".detail-holeinfo");
+          const index = parseInt(ev.target.getAttribute("data-index"), 10);
+          for (let i = 0, len = children.length; i < len; i++) {
+            children[i].className = children[i].className.replace(
+              " active",
+              ""
+            );
+          }
+          ev.target.className += " active";
+          WebHF.SceneManager.focusHole(index);
+          const infoVertices =
+            detailHoleInfo.querySelector("#holeinfo-vertices");
+          infoVertices.textContent = WebHF.SceneManager.holes[index].length;
+          const merging = document.getElementById("merge-threshold");
+          merging.value = WebHF.SceneManager.holes[index].thresholdMerging;
+          const number = detailFillHole.querySelector(".caption .number");
+          number.textContent = index + 1;
+          this.fillButton.setAttribute("data-fillhole", index);
+          this.fillButton.removeEventListener("click", this.callbackFillHole);
+          if (ev.target.className.indexOf("filled") >= 0) {
+            if (this.fillButton.className.indexOf(" disabled") < 0) {
+              this.fillButton.className += " disabled";
+            }
+          } else {
+            this.fillButton.addEventListener("click", this.callbackFillHole);
+            this.fillButton.className = this.fillButton.className.replace(
+              " disabled",
+              ""
+            );
+          }
+          if (ev.target.className.indexOf("filled") < 0) {
+            WebHF.UI.updateProgress(0);
+          } else {
+            WebHF.UI.updateProgress(100);
+          }
+        },
+        showDetailExport() {
+          const FORMATS = CONFIG.EXPORT.FORMATS;
+          const detail = this.domDetails.querySelector(".details-export");
+          const sectionFormat = detail.querySelector(
+            ".detail-exportformat fieldset"
+          );
+          const sectionName = detail.querySelector(
+            ".detail-exportname fieldset"
+          );
+          const sectionExport = detail.querySelector(".detail-export fieldset");
+          const sectionProgress = detail.querySelector(
+            ".detail-exportprogress fieldset"
+          );
+          this.cleanOfChildNodes(sectionFormat);
+          for (let i = 0; i < FORMATS.length; i++) {
+            const format = FORMATS[i];
+            const radioPair = this.BUILDER.createRadioPair(
+              "export",
+              "export_" + format,
+              format,
+              format
+            );
+            radioPair.radio.addEventListener("change", this.changeExportName);
+            if (format == CONFIG.EXPORT.DEFAULT_FORMAT) {
+              radioPair.radio.setAttribute("checked", "checked");
+            }
+            sectionFormat.appendChild(radioPair.radio);
+            sectionFormat.appendChild(radioPair.button);
+          }
+          const defaultName =
+            WebHF.SceneManager.model.name +
+            "_filled." +
+            CONFIG.EXPORT.DEFAULT_FORMAT.toLowerCase();
+          const exportName = sectionName.querySelector("#export_name");
+          exportName.value = defaultName;
+          const btnExport = sectionExport.querySelector(".button");
+          btnExport.removeEventListener("click", this.callbackExport, false);
+          btnExport.addEventListener("click", this.callbackExport, false);
+          this.cleanOfChildNodes(sectionProgress);
+          this.visibleProgress = this.BUILDER.createProgress();
+          sectionProgress.appendChild(this.visibleProgress);
+          this.hideAllDetails();
+          detail.removeAttribute("hidden");
+        },
+        showDetailHoles(foundHoles) {
+          const detail = this.domDetails.querySelector(".details-holefilling");
+          const sectionFoundHoles = detail.querySelector(
+            ".detail-foundholes fieldset"
+          );
+          const sectionHoleInfo = detail.querySelector(
+            ".detail-holeinfo fieldset"
+          );
+          const sectionFillHole = detail.querySelector(
+            ".detail-fillhole fieldset"
+          );
+          const sectionProgress = detail.querySelector(
+            ".detail-fillprogress fieldset"
+          );
+          const holeSelection = sectionFoundHoles.querySelector(".foundHoles");
+          this.cleanOfChildNodes(holeSelection);
+          const msg = sectionFoundHoles.querySelector(".message");
+          if (foundHoles.length > 0) {
+            msg.setAttribute("hidden", "hidden");
+            for (let i = 0; i < foundHoles.length; i++) {
+              const btnFocusHole = this.BUILDER.createButton(
+                "Hole " + (i + 1),
+                this.selectHole.bind(this)
+              );
+              btnFocusHole.className = "foundHole";
+              btnFocusHole.style.borderLeftColor =
+                "#" + foundHoles[i].material.color.getHexString();
+              btnFocusHole.setAttribute("data-index", i);
+              holeSelection.appendChild(btnFocusHole);
+            }
+            sectionFoundHoles.appendChild(holeSelection);
+          } else {
+            msg.removeAttribute("hidden");
+          }
+          const holeVertices =
+            sectionHoleInfo.querySelector("#holeinfo-vertices");
+          holeVertices.textContent = "-";
+          const holeNumber = document.querySelector(".detail-fillhole .number");
+          holeNumber.textContent = "-";
+          const merging = sectionFillHole.querySelector("#merge-threshold");
+          merging.value = "0.000";
+          this.cleanOfChildNodes(sectionProgress);
+          this.visibleProgress = this.BUILDER.createProgress();
+          sectionProgress.appendChild(this.visibleProgress);
+          this.hideAllDetails();
+          detail.removeAttribute("hidden");
+        },
+        startExport(ev) {
+          const d = document;
+          const inputFormat = this.querySelector(
+            ".detail-exportformat input.newradio:checked"
+          );
+          const name = this.querySelector("#export_name");
+          const format = inputFormat.value.toLowerCase();
+          const exportData = WebHF.SceneManager.exportModel(
+            format,
+            name.value.replace("." + format, "")
+          );
+          const content = new Blob([exportData], { type: "text/plain" });
+          WebHF.UI.updateProgress(100);
+          const download = d.createElement("a");
+          download.download = name.value;
+          download.href = window.URL.createObjectURL(content);
+          download.addEventListener("click", WebHF.Utils.selfRemoveFromDOM);
+          download.setAttribute("hidden", "hidden");
+          d.body.appendChild(download);
+          download.click();
+        },
+        syncInterfaceWithConfig() {
+          const d = document;
+          if (CONFIG.MODE === "solid") {
+            d.getElementById("render_solid_model").setAttribute(
+              "checked",
+              "checked"
+            );
+            d.getElementById("render_solid_filling").setAttribute(
+              "checked",
+              "checked"
+            );
+          } else if (CONFIG.MODE === "wireframe") {
+            d.getElementById("render_wireframe_model").setAttribute(
+              "checked",
+              "checked"
+            );
+            d.getElementById("render_wireframe_filling").setAttribute(
+              "checked",
+              "checked"
+            );
+          }
+          if (CONFIG.SHADING === "phong") {
+            d.getElementById("shading_phong").setAttribute(
+              "checked",
+              "checked"
+            );
+          } else if (CONFIG.SHADING === "flat") {
+            d.getElementById("shading_flat").setAttribute("checked", "checked");
+          }
+          if (CONFIG.FILLING.COLLISION_TEST === "filling") {
+            d.getElementById("collision_test_filling").setAttribute(
+              "checked",
+              "checked"
+            );
+          } else if (CONFIG.FILLING.COLLISION_TEST === "all") {
+            d.getElementById("collision_test_all").setAttribute(
+              "checked",
+              "checked"
+            );
+          }
+          if (CONFIG.FILLING.AF_MODE === "parallel") {
+            d.getElementById("collision-worker").value = CONFIG.FILLING.WORKER;
+            d.getElementById("collision-worker").parentNode.removeAttribute(
+              "hidden"
+            );
+          }
+        },
+        updateProgress: function (value) {
+          this.visibleProgress.value = value;
+          this.visibleProgress.textContent = value + "%";
+          if (value == 100) {
+            this.visibleProgress.className += " finished";
+          } else {
+            this.visibleProgress.className =
+              this.visibleProgress.className.replace(" finished", "");
+          }
+        },
+      };
+      WebHF.UI.BUILDER = {
+        createButton(value, clickCall, id) {
+          const btn = document.createElement("input");
+          btn.className = "button";
+          btn.type = "button";
+          btn.value = value;
+          if (id) {
+            btn.id = id;
+          }
+          if (typeof clickCall === "function") {
+            btn.addEventListener("click", clickCall);
+          }
+          return btn;
+        },
+        createProgress() {
+          const progress = document.createElement("progress");
+          progress.max = 100;
+          progress.value = 0;
+          progress.textContent = "0%";
+          return progress;
+        },
+        createRadioPair(group, id, radioValue, btnText) {
+          const input = document.createElement("input");
+          input.className = "newradio";
+          input.type = "radio";
+          input.name = group;
+          input.id = id;
+          input.value = radioValue;
+          const label = document.createElement("label");
+          label.className = "newradio";
+          label.setAttribute("for", id);
+          label.textContent = btnText;
+          return { radio: input, button: label };
+        },
+      };
+      WebHF.UI.REGISTER = {
+        registerEvents() {
+          WebHF.resize();
+          window.addEventListener("resize", WebHF.resize);
+          this.registerImport();
+          this.registerLightingOptions();
+          this.registerModeOptions();
+          this.registerShadingOptions();
+          this.registerEditOptions();
+          this.registerCollisionTestOptions();
+          this.registerCameraReset();
+          this.registerExport();
+        },
+        registerCameraReset() {
+          const buttonResetCamera = document.getElementById("controls_reset");
+          buttonResetCamera.addEventListener("click", (ev) =>
+            WebHF.SceneManager.resetCamera()
+          );
+        },
+        registerCollisionTestOptions() {
+          const d = document;
+          let radio = d.getElementById("collision_test_filling");
+          radio.addEventListener("change", (ev) =>
+            WebHF.AdvancingFront.setCollisionTest("filling")
+          );
+          radio = d.getElementById("collision_test_all");
+          radio.addEventListener("change", (ev) =>
+            WebHF.AdvancingFront.setCollisionTest("all")
+          );
+        },
+        registerEditOptions() {
+          const buttonFindEdges = document.getElementById("edit_findedges");
+          buttonFindEdges.addEventListener("click", (ev) =>
+            WebHF.SceneManager.findHoles(ev)
+          );
+        },
+        registerExport() {
+          const buttonShowExport = document.getElementById("export_options");
+          buttonShowExport.addEventListener("click", (ev) =>
+            WebHF.UI.showDetailExport(ev)
+          );
+        },
+        registerImport() {
+          const inputUpload = document.getElementById("import_file");
+          inputUpload.addEventListener("change", (ev) =>
+            WebHF.Loader.loadFile(ev)
+          );
+          const dropzone = document.body;
+          dropzone.addEventListener("dragover", (ev) =>
+            WebHF.UI.dragoverOfImport(ev)
+          );
+          dropzone.addEventListener("drop", (ev) =>
+            WebHF.Loader.loadFileFromDrop(ev)
+          );
+        },
+        registerLightingOptions() {
+          const d = document;
+          const lightOptions = ["on", "off"];
+          const lightTypes = ["ambient", "camera", "directional"];
+          const onChange = (ev) => WebHF.SceneManager.toggleLight(ev);
+          for (let i = 0; i < lightTypes.length; i++) {
+            for (let j = 0; j < lightOptions.length; j++) {
+              const radio = d.getElementById(
+                "light_" + lightTypes[i] + "_" + lightOptions[j]
+              );
+              radio.addEventListener("change", onChange);
+            }
+          }
+        },
+        registerModeOptions() {
+          const d = document;
+          const modeOptions = ["solid", "wireframe"];
+          const onChangeModel = (ev) =>
+            WebHF.SceneManager.changeMode(ev, "model");
+          const onChangeFilling = (ev) =>
+            WebHF.SceneManager.changeMode(ev, "filling");
+          for (let i = 0; i < modeOptions.length; i++) {
+            let radio = d.getElementById("render_" + modeOptions[i] + "_model");
+            radio.addEventListener("change", onChangeModel);
+          }
+          for (let i = 0; i < modeOptions.length; i++) {
+            let radio = d.getElementById(
+              "render_" + modeOptions[i] + "_filling"
+            );
+            radio.addEventListener("change", onChangeFilling);
+          }
+        },
+        registerShadingOptions() {
+          const d = document;
+          const shadingOptions = ["flat", "phong"];
+          const onChange = (ev) => WebHF.SceneManager.changeShading(ev);
+          for (let i = 0; i < shadingOptions.length; i++) {
+            const radio = d.getElementById("shading_" + shadingOptions[i]);
+            radio.addEventListener("change", onChange);
+          }
+        },
+      };
+      ("use strict");
+      WebHF.SceneManager = {
+        fillings: [],
+        holeLines: [],
+        holes: [],
+        lightStatus: { ambient: true, camera: true, directional: true },
+        modeFilling: CONFIG.MODE,
+        model: null,
+        modeModel: CONFIG.MODE,
+        scene: null,
+        shading: CONFIG.SHADING,
+        addAxis() {
+          const axis = new THREE.AxisHelper(CONFIG.AXIS.SIZE);
+          axis.name = "axis";
+          this.scene.add(axis);
+        },
+        centerModel(mesh) {
+          const center = new THREE.Vector3();
+          mesh.geometry.boundingBox.getCenter(center);
+          mesh.position.x -= center.x;
+          mesh.position.y -= center.y;
+          mesh.position.z -= center.z;
+          return mesh;
+        },
+        changeMode(ev, what) {
+          const value = ev.target.value;
+          if (!ev.target.checked || this.model === null) {
+            return false;
+          }
+          if (what === "model") {
+            switch (value) {
+              case "solid":
+                this.model.material.wireframe = false;
+                break;
+              case "wireframe":
+                this.model.material.wireframe = true;
+                break;
+              default:
+                return false;
+            }
+            this.modeModel = value;
+          } else if (what === "filling") {
+            switch (value) {
+              case "solid":
+                for (let i = 0; i < this.fillings.length; i++) {
+                  this.fillings[i].solid.material.wireframe = false;
+                }
+                break;
+              case "wireframe":
+                for (let i = 0; i < this.fillings.length; i++) {
+                  this.fillings[i].solid.material.wireframe = true;
+                }
+                break;
+              default:
+                return false;
+            }
+            this.modeFilling = value;
+          }
+          WebHF.render();
+        },
+        changeShading(ev) {
+          if (!ev.target.checked || this.model === null) {
+            return;
+          }
+          const value = ev.target.value;
+          let flatShading = true;
+          switch (value) {
+            case "flat":
+              flatShading = true;
+              break;
+            case "phong":
+              flatShading = false;
+              break;
+            default:
+              return;
+          }
+          this.model.material.flatShading = flatShading;
+          this.model.material.needsUpdate = true;
+          this.model.geometry.normalsNeedUpdate = true;
+          for (let i = 0; i < this.fillings.length; i++) {
+            this.fillings[i].solid.material.flatShading = flatShading;
+            this.fillings[i].solid.material.needsUpdate = true;
+            this.fillings[i].solid.geometry.normalsNeedUpdate = true;
+          }
+          this.shading = value;
+          WebHF.render();
+        },
+        clearModels() {
+          for (let i = this.scene.children.length - 1; i >= 0; i--) {
+            let obj = this.scene.children[i];
+            if (obj instanceof THREE.Light || obj instanceof THREE.Camera) {
+              continue;
+            }
+            if (obj.name === "axis") {
+              continue;
+            }
+            this.scene.remove(obj);
+          }
+          this.fillings = [];
+        },
+        createCrossVector(vp, v, vn, size, color, moveWithModel) {
+          let cross = new THREE.Vector3();
+          cross = cross
+            .crossVectors(vp.clone().sub(v), vn.clone().sub(v))
+            .add(v);
+          const point = this.createPoint(cross, size, color, moveWithModel);
+          const line = this.createLine(v, cross, 1, color, moveWithModel);
+          return { point: point, line: line };
+        },
+        createLine(start, end, width, color, moveWithModel) {
+          const material = new THREE.LineBasicMaterial({
+            linewidth: width,
+            color: color,
+          });
+          const geo = new THREE.Geometry();
+          geo.vertices.push(start.clone().add(this.model.position));
+          geo.vertices.push(end.clone().add(this.model.position));
+          return new THREE.Line(geo, material);
+        },
+        createPoint(position, size, color, moveWithModel) {
+          const material = new THREE.MeshBasicMaterial({ color: color });
+          const mesh = new THREE.Mesh(new THREE.SphereGeometry(size), material);
+          mesh.position.x = position.x;
+          mesh.position.y = position.y;
+          mesh.position.z = position.z;
+          if (moveWithModel) {
+            const gmp = this.model.position;
+            mesh.position.x += gmp.x;
+            mesh.position.y += gmp.y;
+            mesh.position.z += gmp.z;
+          }
+          return mesh;
+        },
+        exportModel(format, modelName) {
+          let exportData = null;
+          switch (format) {
+            case "obj":
+              exportData = WebHF.Export.saveOBJ(this.model);
+              break;
+            case "stl":
+              exportData = WebHF.Export.saveSTL(this.model, modelName);
+              break;
+            default:
+              throw new Error("Unknown export format: " + format);
+          }
+          return exportData;
+        },
+        fillHole(ev) {
+          const index = parseInt(ev.target.getAttribute("data-fillhole"), 10);
+          const mergeThreshold = parseFloat(
+            document.getElementById("merge-threshold").value,
+            10
+          );
+          const workerNumber = parseInt(
+            document.getElementById("collision-worker").value,
+            10
+          );
+          if (isNaN(index)) {
+            console.error("Not a valid hole index.");
+            return;
+          }
+          if (this.holes.length <= index) {
+            console.error("No hole exists for this index.");
+            return;
+          }
+          if (isNaN(mergeThreshold) || mergeThreshold < 0.001) {
+            console.error(
+              "Merge threshold not a valid value. Needs to be greater or equal 0.001."
+            );
+            return;
+          }
+          if (isNaN(workerNumber) || workerNumber < 1) {
+            console.error(
+              "Number of worker processes not a valid value. Need to be greater or equal 1. Optimal number equals the number of CPU cores."
+            );
+            return;
+          }
+          WebHF.UI.disableFillButton();
+          WebHF.AdvancingFront.start(
+            this.model.geometry,
+            this.holes[index],
+            mergeThreshold,
+            this.mergeWithFilling.bind(this),
+            workerNumber
+          );
+        },
+        findHoles() {
+          if (this.model == null) {
+            console.error("No model loaded.");
+            return;
+          }
+          if (this.holeLines.length > 0) {
+            for (let i = 0, len = this.holeLines.length; i < len; i++) {
+              this.scene.remove(this.holeLines[i]);
+            }
+          }
+          this.holeLines = [];
+          const border = WebHF.HoleFinding.findBorderEdges(this.model);
+          if (CONFIG.HOLES.SHOW_LINES) {
+            for (let i = 0, len = border.lines.length; i < len; i++) {
+              this.scene.add(border.lines[i]);
+            }
+            this.holeLines = border.lines;
+          }
+          for (let i = 0, len = border.points.length; i < len; i++) {
+            this.scene.add(border.points[i]);
+          }
+          WebHF.render();
+          this.holes = border.holes;
+          WebHF.UI.showDetailHoles(border.lines);
+        },
+        fitCameraToModel() {
+          const bb = this.model.geometry.boundingBox;
+          this.resetCamera();
+          WebHF.camera.position.x = Math.abs(bb.max.x - bb.min.x);
+          WebHF.camera.position.y = Math.abs(bb.max.y - bb.min.y);
+          WebHF.camera.position.z = Math.abs(bb.max.z - bb.min.z);
+        },
+        focusHole(index) {
+          const cfgCam = CONFIG.CAMERA;
+          if (isNaN(index)) {
+            console.error("Not a valid hole index.");
+            return;
+          }
+          if (this.holes.length <= index) {
+            console.error("No hole exists for this index.");
+            return;
+          }
+          const bbox = WebHF.Utils.getBoundingBox(this.holes[index]);
+          bbox.center.add(this.model.position);
+          bbox.center.setLength(
+            bbox.center.length() * cfgCam.FOCUS.DISTANCE_FACTOR
+          );
+          let stepX = bbox.center.x - WebHF.camera.position.x;
+          let stepY = bbox.center.y - WebHF.camera.position.y;
+          let stepZ = bbox.center.z - WebHF.camera.position.z;
+          if (cfgCam.FOCUS.STEPS > 0) {
+            stepX /= cfgCam.FOCUS.STEPS;
+            stepY /= cfgCam.FOCUS.STEPS;
+            stepZ /= cfgCam.FOCUS.STEPS;
+          }
+          this.moveCameraToPosition(stepX, stepY, stepZ, 0);
+        },
+        geometryToMesh(geometry) {
+          const material = new THREE.MeshPhongMaterial();
+          material.flatShading = this.isFlatShading();
+          material.side = THREE.DoubleSide;
+          material.wireframe = this.modeModel == "wireframe";
+          const mesh = new THREE.Mesh(geometry);
+          mesh.material = material;
+          mesh.geometry.computeFaceNormals();
+          mesh.geometry.computeVertexNormals();
+          mesh.geometry.computeBoundingBox();
+          return mesh;
+        },
+        isFlatShading() {
+          switch (this.shading) {
+            case "flat":
+              return true;
+            case "phong":
+              return false;
+            default:
+              return true;
+          }
+        },
+        init() {
+          this.scene = new THREE.Scene();
+          if (CONFIG.AXIS.SHOW) {
+            this.addAxis();
+          }
+        },
+        mergeWithFilling(filling, holeIndex) {
+          const gm = this.model;
+          gm.geometry.merge(filling);
+          gm.geometry.mergeVertices();
+          gm.geometry.computeFaceNormals();
+          gm.geometry.computeVertexNormals();
+          gm.geometry.computeBoundingBox();
+          WebHF.UI.checkHoleFinished(holeIndex);
+          WebHF.UI.updateProgress(100);
+        },
+        moveCameraLights(ev) {
+          const lights = WebHF.lights.camera;
+          const pos = ev.target.object.position.clone();
+          for (let i = 0, len = lights.length; i < len; i++) {
+            lights[i].position.copy(pos);
+          }
+        },
+        moveCameraToPosition(stepX, stepY, stepZ, count) {
+          WebHF.camera.position.x += stepX;
+          WebHF.camera.position.y += stepY;
+          WebHF.camera.position.z += stepZ;
+          WebHF.render();
+          count++;
+          if (count >= CONFIG.CAMERA.FOCUS.STEPS) {
+            return;
+          } else {
+            setTimeout(function () {
+              WebHF.SceneManager.moveCameraToPosition(
+                stepX,
+                stepY,
+                stepZ,
+                count
+              );
+            }, CONFIG.CAMERA.FOCUS.TIMEOUTS);
+          }
+        },
+        renderBoundingBox(model) {
+          const bb = model.geometry.boundingBox;
+          const cubeGeometry = new THREE.Geometry();
+          const material = new THREE.LineBasicMaterial({
+            color: CONFIG.BBOX.COLOR,
+            shading: THREE.NoShading,
+          });
+          cubeGeometry.vertices.push(
+            bb.min,
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.min.z),
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.min.z),
+            new THREE.Vector3(bb.max.x, bb.max.y, bb.min.z),
+            new THREE.Vector3(bb.max.x, bb.max.y, bb.min.z),
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.min.z),
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.min.z),
+            bb.min,
+            bb.max,
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.max.z),
+            new THREE.Vector3(bb.min.x, bb.min.y, bb.max.z),
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.max.z),
+            new THREE.Vector3(bb.min.x, bb.min.y, bb.max.z),
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.max.z),
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.max.z),
+            bb.max,
+            bb.min,
+            new THREE.Vector3(bb.min.x, bb.min.y, bb.max.z),
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.min.z),
+            new THREE.Vector3(bb.max.x, bb.min.y, bb.max.z),
+            new THREE.Vector3(bb.max.x, bb.max.y, bb.min.z),
+            new THREE.Vector3(bb.max.x, bb.max.y, bb.max.z),
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.min.z),
+            new THREE.Vector3(bb.min.x, bb.max.y, bb.max.z)
+          );
+          const mesh = new THREE.Line(cubeGeometry, material, THREE.LinePieces);
+          mesh.position = model.position;
+          this.scene.add(mesh);
+        },
+        resetCamera() {
+          WebHF.controls.reset();
+        },
+        showFilling(front, filling, holeIndex) {
+          const model = WebHF.SceneManager.model;
+          this.fillings.push({ solid: false, wireframe: false });
+          const materialFilling = new THREE.MeshPhongMaterial({
+            color: CONFIG.FILLING.COLOR,
+            flatShading: WebHF.SceneManager.isFlatShading(),
+            side: THREE.DoubleSide,
+            wireframe: this.modeFilling == "wireframe",
+            wireframeLinewidth: CONFIG.FILLING.LINE_WIDTH,
+          });
+          const meshFilling = new THREE.Mesh(filling, materialFilling);
+          meshFilling.position.x += model.position.x;
+          meshFilling.position.y += model.position.y;
+          meshFilling.position.z += model.position.z;
+          meshFilling.geometry.computeFaceNormals();
+          meshFilling.geometry.computeVertexNormals();
+          meshFilling.geometry.computeBoundingBox();
+          this.fillings[this.fillings.length - 1].solid = meshFilling;
+          WebHF.SceneManager.scene.add(meshFilling);
+          if (CONFIG.FILLING.SHOW_WIREFRAME) {
+            const materialWire = new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              side: THREE.DoubleSide,
+              wireframe: true,
+              wireframeLinewidth: CONFIG.FILLING.LINE_WIDTH,
+            });
+            const meshWire = new THREE.Mesh(filling, materialWire);
+            meshWire.position.x += model.position.x;
+            meshWire.position.y += model.position.y;
+            meshWire.position.z += model.position.z;
+            meshWire.geometry.computeFaceNormals();
+            meshWire.geometry.computeVertexNormals();
+            meshWire.geometry.computeBoundingBox();
+            this.fillings[this.fillings.length - 1].wireframe = meshWire;
+            WebHF.SceneManager.scene.add(meshWire);
+          }
+          if (CONFIG.DEBUG.SHOW_FRONT) {
+            const material = new THREE.LineBasicMaterial({
+              color: 0xffffff,
+              linewidth: 4,
+            });
+            const debugFront = front.clone();
+            debugFront.vertices.push(debugFront.vertices[0]);
+            const mesh = new THREE.Line(debugFront, material);
+            mesh.position.x += model.position.x;
+            mesh.position.y += model.position.y;
+            mesh.position.z += model.position.z;
+            WebHF.SceneManager.scene.add(mesh);
+          }
+          WebHF.render();
+        },
+        toggleLight(ev) {
+          const lightType = ev.target.name;
+          let lights = null;
+          let lightStatus = null;
+          switch (lightType) {
+            case "light_ambient":
+              lights = WebHF.lights.ambient;
+              lightStatus = this.lightStatus.ambient;
+              this.lightStatus.ambient = !lightStatus;
+              break;
+            case "light_camera":
+              lights = WebHF.lights.camera;
+              lightStatus = this.lightStatus.camera;
+              this.lightStatus.camera = !lightStatus;
+              break;
+            case "light_directional":
+              lights = WebHF.lights.directional;
+              lightStatus = this.lightStatus.directional;
+              this.lightStatus.directional = !lightStatus;
+              break;
+            default:
+              console.error("Unknown light type: " + lightType);
+              return;
+          }
+          const len = lights.length;
+          if (lightStatus) {
+            for (let i = 0; i < len; i++) {
+              this.scene.remove(lights[i]);
+            }
+          } else {
+            for (let i = 0; i < len; i++) {
+              this.scene.add(lights[i]);
+            }
+          }
+          WebHF.render();
+        },
+      };
+      ("use strict");
+      WebHF.Loader = {
+        checkAndFixFaces(geometry) {
+          const mesh = new WebHF.HalfEdgeMesh(geometry);
+          const remove = [];
+          let facesRemoved = 0;
+          for (let i = mesh.vertices.length - 1; i >= 0; i--) {
+            const v = mesh.vertices[i];
+            for (let j = 0, len = v.edges.length; j < len; j++) {
+              if (v.edges[j].vertex.index == v.index) {
+                remove.push(v.index);
+                break;
+              }
+            }
+            if (v.edges.length === 0) {
+              remove.push(v.index);
+            }
+          }
+          remove.sort((a, b) => a - b);
+          for (let i = remove.length - 1; i >= 0; i--) {
+            geometry.vertices.splice(remove[i], 1);
+            for (let j = geometry.faces.length - 1; j >= 0; j--) {
+              const f = geometry.faces[j];
+              if (remove[i] == f.a || remove[i] == f.b || remove[i] == f.c) {
+                geometry.faces.splice(j, 1);
+                facesRemoved++;
+                continue;
+              }
+              geometry.faces = WebHF.Utils.decreaseHigherFaceIndexes(
+                geometry.faces,
+                j,
+                remove[i]
+              );
+            }
+          }
+          console.log(
+            "CHECK_AND_FIX_FACES: Removed " +
+              remove.length +
+              " vertices and " +
+              facesRemoved +
+              " faces."
+          );
+          return geometry;
+        },
+        getFileExtension(filename) {
+          const extension = filename.split(".");
+          return extension[extension.length - 1].toLowerCase();
+        },
+        getLoader: function (extension, cb) {
+          let modulePath = "./threeJS/loaders/";
+          let className = null;
+          switch (extension) {
+            case "obj":
+              modulePath += "OBJLoader.js";
+              className = "OBJLoader";
+              break;
+            case "ply":
+              modulePath += "PLYLoader.js";
+              className = "PLYLoader";
+              break;
+            case "stl":
+              modulePath += "STLLoader.js";
+              className = "STLLoader";
+              break;
+            case "vtk":
+              modulePath += "VTKLoader.js";
+              className = "VTKLoader";
+              break;
+            default:
+              throw new Error(
+                `No loader available for extension ${extension.toUpperCase()}.`
+              );
+          }
+          import(
+            "https://unpkg.com/three@0.106.2/examples/jsm/loaders/OBJLoader.js"
+          ).then((module) => cb(new module[className]()));
+        },
+        loadFile(ev) {
+          if (ev.target.files.length === 0) {
+            console.log("No file selected.");
+            return false;
+          }
+          const file = ev.target.files[0];
+          const extension = this.getFileExtension(file.name);
+          if (this.validateFileExtension(extension)) {
+            this.readFile(file, extension, this.loadModel.bind(this));
+          } else {
+            console.error(
+              "Extension of file (." +
+                extension +
+                ") not supported. Supported are:",
+              CONFIG.ALLOWED_FILE_EXTENSIONS
+            );
+          }
+        },
+        loadFileFromDrop(ev) {
+          ev.preventDefault();
+          if (ev.dataTransfer.files.length === 0) {
+            console.log("No file selected");
+            return false;
+          }
+          const dummyE = { target: { files: ev.dataTransfer.files } };
+          this.loadFile(dummyE);
+        },
+        loadModel(ev, filename, extension) {
+          const SM = WebHF.SceneManager;
+          this.getLoader(extension, (loader) => {
+            const content = loader.parse(ev.target.result);
+            let bufferGeometry = null;
+            if (extension === "obj") {
+              bufferGeometry = content.children[0].geometry;
+            } else {
+              bufferGeometry = content;
+            }
+            let geometry = new THREE.Geometry();
+            geometry.fromBufferGeometry(bufferGeometry);
+            geometry.mergeVertices();
+            if (CONFIG.CHECK_AND_FIX_FACES) {
+              geometry = this.checkAndFixFaces(geometry);
+            }
+            SM.model = SM.geometryToMesh(geometry);
+            SM.model = SM.centerModel(SM.model);
+            SM.model.name = filename.replace("." + extension, "");
+            console.log("Imported: " + filename);
+            WebHF.UI.resetInterface();
+            SM.clearModels();
+            SM.fitCameraToModel();
+            if (CONFIG.BBOX.SHOW) {
+              SM.renderBoundingBox(SM.model);
+            }
+            SM.scene.add(SM.model);
+            WebHF.render();
+          });
+        },
+        readFile(file, extension, callback) {
+          const reader = new FileReader();
+          reader.addEventListener("load", (ev) =>
+            callback(ev, file.name, extension)
+          );
+          reader.readAsText(file);
+        },
+        validateFileExtension(extension) {
+          return CONFIG.ALLOWED_FILE_EXTENSIONS.includes(extension);
+        },
+      };
+      ("use strict");
+      WebHF.HoleFinding = {
+        allVisitedBp: null,
+        visitedBp: null,
+        decideNextVertexByAngle(gv, vPrev, bp, model) {
+          const mgv = model.geometry.vertices;
+          const nextRoute = { angle: 360.0, index: -1 };
+          const v = mgv[bp.index];
+          let alreadyVisited = 0;
+          for (let i = 0; i < bp.edges.length; i++) {
+            const ix = bp.edges[i].vertex.index;
+            const vNext = mgv[ix];
+            if (
+              !bp.edges[i].isBorderEdge() ||
+              gv.includes(vNext) ||
+              this.allVisitedBp.includes(ix)
+            ) {
+              alreadyVisited++;
+              continue;
+            }
+            const angle = WebHF.Utils.calculateAngle(
+              vPrev,
+              v,
+              vNext,
+              model.position
+            );
+            if (angle < nextRoute.angle) {
+              nextRoute.angle = angle;
+              nextRoute.index = i;
+            }
+          }
+          if (alreadyVisited === bp.edges.length - 1) {
+            this.visitedBp.push(bp.index);
+          }
+          if (nextRoute.index === -1) {
+            throw new Error(
+              "Couldn't find edge to follow from multi border point."
+            );
+          }
+          return bp.edges[nextRoute.index].vertex;
+        },
+        findBorderEdges(model) {
+          const COLORS = CONFIG.HOLES.COLOR;
+          const mesh = new WebHF.HalfEdgeMesh(model.geometry);
+          const holes = [];
+          const lines = [];
+          const points = [];
+          let ignoredUnconnected = 0;
+          this.allVisitedBp = [];
+          for (let i = 0, lenMV = mesh.vertices.length; i < lenMV; i++) {
+            const vertex = mesh.vertices[i];
+            if (vertex.edges.length === 0) {
+              ignoredUnconnected++;
+              continue;
+            }
+            if (
+              !this.allVisitedBp.includes(vertex.index) &&
+              vertex.isBorderPoint()
+            ) {
+              this.visitedBp = [];
+              let geometry = null;
+              try {
+                geometry = this.getNeighbouringBorderPoints(
+                  model,
+                  mesh,
+                  vertex
+                );
+              } catch (err) {
+                console.error(err.name + ": " + err.message);
+                console.warn("Skipping hole.");
+                continue;
+              }
+              holes.push(this.geometryToHoleArray(geometry));
+              holes[holes.length - 1].splice(
+                model.geometry.vertices[vertex.index],
+                0
+              );
+              const material = new THREE.LineBasicMaterial({
+                color: COLORS[lines.length % COLORS.length],
+                linewidth: CONFIG.HOLES.LINE_WIDTH,
+              });
+              const line = new THREE.Line(geometry, material);
+              line.position.copy(model.position);
+              lines.push(line);
+              if (CONFIG.HOLES.SHOW_POINTS) {
+                for (
+                  let j = 0, lenGV = geometry.vertices.length;
+                  j < lenGV;
+                  j++
+                ) {
+                  const v = geometry.vertices[j];
+                  points.push(
+                    WebHF.SceneManager.createPoint(v, 0.02, 0xa1da42, true)
+                  );
+                }
+              }
+              this.allVisitedBp = this.allVisitedBp.concat(this.visitedBp);
+            }
+          }
+          if (ignoredUnconnected > 0) {
+            console.warn(
+              "Ignored " +
+                ignoredUnconnected +
+                " vertices, because they were not part of any edge."
+            );
+          }
+          return { holes: holes, lines: lines, points: points };
+        },
+        geometryToHoleArray(geometry) {
+          const hole = [];
+          const len = geometry.vertices.length;
+          let thresholdMerging = 0.0;
+          for (let i = 0; i < len; i++) {
+            const v = geometry.vertices[i];
+            const vn = geometry.vertices[(i + 1) % len];
+            hole.push(v);
+            thresholdMerging += v.distanceTo(vn);
+          }
+          thresholdMerging /= len;
+          hole.thresholdMerging = Math.round(thresholdMerging * 1000) / 1000;
+          return hole;
+        },
+        getNeighbouringBorderPoints(model, mesh, start) {
+          const geometry = new THREE.Geometry();
+          const mgv = model.geometry.vertices;
+          let bp = start;
+          let v = null;
+          while (true) {
+            const vPrev = v;
+            v = mgv[bp.index];
+            if (!bp.isBorderPoint()) {
+              break;
+            }
+            if (!bp.isMultiBorderPoint() && geometry.vertices.includes(v)) {
+              break;
+            }
+            if (this.allVisitedBp.includes(bp.index)) {
+              break;
+            }
+            if (vPrev !== null && bp == start) {
+              break;
+            }
+            if (bp != start) {
+              geometry.vertices.push(v.clone());
+            }
+            if (bp.isMultiBorderPoint()) {
+              if (vPrev === null) {
+                if (bp.firstEdge === null) {
+                  break;
+                } else if (this.visitedBp.includes(bp.firstEdge.vertex.index)) {
+                  break;
+                }
+              }
+              if (vPrev === null) {
+                bp = bp.firstEdge.vertex;
+              } else {
+                bp = this.decideNextVertexByAngle(
+                  geometry.vertices,
+                  vPrev,
+                  bp,
+                  model
+                );
+              }
+              if (!bp.isMultiBorderPoint()) {
+                this.visitedBp.push(bp.index);
+              }
+            } else {
+              this.visitedBp.push(bp.index);
+              bp = bp.firstEdge.vertex;
+            }
+          }
+          geometry.vertices.splice(0, 0, mgv[start.index]);
+          if (geometry.vertices.length === 1) {
+            throw new Error(
+              "Hole has only 1 vertex. Which isn't really a hole."
+            );
+          }
+          const angleAverage = WebHF.Utils.calculateAngleAverage(
+            geometry.vertices,
+            model.position
+          );
+          if (angleAverage >= 180.0) {
+            throw new Error(
+              "Found hole is not a hole, but the outline of an existing triangle."
+            );
+          }
+          geometry.vertices.push(model.geometry.vertices[start.index]);
+          return geometry;
+        },
+      };
+      ("use strict");
+      WebHF.Export = {
+        saveOBJ(model) {
+          const mgFaces = model.geometry.faces;
+          const mgVertices = model.geometry.vertices;
+          let objF = "";
+          let objV = "";
+          for (let i = 0, len = mgVertices.length; i < len; i++) {
+            const v = mgVertices[i];
+            objV += `v ${v.x}${v.y}${v.z}\n`;
+          }
+          for (let i = 0, len = mgFaces.length; i < len; i++) {
+            const f = mgFaces[i];
+            objF += `f ${f.a + 1}${f.b + 1}${f.c + 1}\n`;
+          }
+          return objV + "\n" + objF;
+        },
+        saveSTL(model, modelName) {
+          const mgFaces = model.geometry.faces;
+          const mgVertices = model.geometry.vertices;
+          let data = "";
+          if (!modelName) {
+            modelName = "";
+          }
+          data += "solid " + modelName.replace(" ", "_") + "\n";
+          for (let i = 0, len = mgFaces.length; i < len; i++) {
+            const f = mgFaces[i];
+            const fn = f.normal;
+            let x = WebHF.Utils.floatToScientific(fn.x);
+            let y = WebHF.Utils.floatToScientific(fn.y);
+            let z = WebHF.Utils.floatToScientific(fn.z);
+            data += `facet normal ${x}${y}${z}\n`;
+            data += "    outer loop\n";
+            x = WebHF.Utils.floatToScientific(mgVertices[f.a].x);
+            y = WebHF.Utils.floatToScientific(mgVertices[f.a].y);
+            z = WebHF.Utils.floatToScientific(mgVertices[f.a].z);
+            data += `vertex ${x}${y}${z}\n`;
+            x = WebHF.Utils.floatToScientific(mgVertices[f.b].x);
+            y = WebHF.Utils.floatToScientific(mgVertices[f.b].y);
+            z = WebHF.Utils.floatToScientific(mgVertices[f.b].z);
+            data += `vertex ${x}${y}${z}\n`;
+            x = WebHF.Utils.floatToScientific(mgVertices[f.c].x);
+            y = WebHF.Utils.floatToScientific(mgVertices[f.c].y);
+            z = WebHF.Utils.floatToScientific(mgVertices[f.c].z);
+            data += `vertex ${x}${y}${z}\n`;
+            data += "    endloop\n";
+            data += "  endfacet\n";
+          }
+          data += "endsolid " + modelName + "\n";
+          return data;
+        },
+      };
+    </script>
+    <script>
+      "use strict";
+      WebHF.AdvancingFront = {
+        callback: null,
+        collisionTestMode: CONFIG.FILLING.COLLISION_TEST,
+        heap: null,
+        hole: null,
+        holeIndex: null,
+        loopCounter: null,
+        mergeThreshold: null,
+        modelGeo: null,
+        STOP_AFTER: CONFIG.DEBUG.AF_STOP_AFTER_ITER,
+        closeHole3(front, filling) {
+          filling.faces.push(
+            new THREE.Face3(
+              filling.vertices.indexOf(front.vertices[1]),
+              filling.vertices.indexOf(front.vertices[0]),
+              filling.vertices.indexOf(front.vertices[2])
+            )
+          );
+          return filling;
+        },
+        closeHole4(front, filling) {
+          filling.faces.push(
+            new THREE.Face3(
+              filling.vertices.indexOf(front.vertices[3]),
+              filling.vertices.indexOf(front.vertices[2]),
+              filling.vertices.indexOf(front.vertices[0])
+            )
+          );
+          filling.faces.push(
+            new THREE.Face3(
+              filling.vertices.indexOf(front.vertices[1]),
+              filling.vertices.indexOf(front.vertices[0]),
+              filling.vertices.indexOf(front.vertices[2])
+            )
+          );
+          return filling;
+        },
+        computeAngles(front) {
+          const angles = [];
+          const smallest = { angle: 361.0, index: -1 };
+          for (let i = 0, len = front.length; i < len; i++) {
+            const vp = front[i == 0 ? len - 1 : i - 1];
+            const v = front[i];
+            const vn = front[(i + 1) % len];
+            const prev = i == 0 ? null : angles[angles.length - 1];
+            const angle = new WebHF.Angle([vp, v, vn]);
+            angle.previous = prev;
+            angles.push(angle);
+            if (i > 0) {
+              angles[angles.length - 2].next = angles[angles.length - 1];
+            }
+            if (smallest.angle > angle.degree) {
+              smallest.angle = angle.degree;
+              smallest.index = i;
+            }
+          }
+          angles[0].previous = angles[angles.length - 1];
+          angles[angles.length - 1].next = angles[0];
+          return { angles: angles, smallest: smallest };
+        },
+        getNextAngle() {
+          let angle = this.heap.removeFirst();
+          let count = 0;
+          while (angle.waitForUpdate) {
+            this.heap.insert(angle.degree, angle);
+            angle = this.heap.removeFirst();
+            if (++count >= this.heap.size()) {
+              throw new Error(
+                "No more angles available, that don't need an update."
+              );
+            }
+          }
+          return angle;
+        },
+        heapMergeVertex(vOld, vNew) {
+          for (const key in this.heap.values) {
+            const angles = this.heap.values[key];
+            for (let j = 0; j < angles.length; j++) {
+              const angle = angles[j];
+              if (angle.vertices[1] == vOld) {
+                if (angle.previous.vertices[1] == vNew) {
+                  angle.previous.vertices[2] = angle.vertices[2];
+                  angle.next.vertices[0] = vNew;
+                } else if (angle.next.vertices[1] == vNew) {
+                  angle.previous.vertices[2] = vNew;
+                  angle.next.vertices[0] = angle.vertices[0];
+                } else {
+                  throw new Error(
+                    "Situation that shouldn't be possible. Neither previous nor next angle contain the new vertex."
+                  );
+                }
+                angle.previous.next = angle.next;
+                angle.next.previous = angle.previous;
+                this.heap.remove(angle.previous.degree);
+                this.heap.remove(angle.next.degree);
+                angle.previous.calculateAngle();
+                angle.next.calculateAngle();
+                this.heap.insert(angle.previous.degree, angle.previous);
+                this.heap.insert(angle.next.degree, angle.next);
+                this.heap.remove(angle.degree);
+                return true;
+              }
+            }
+          }
+          return false;
+        },
+        initHeap(front) {
+          const ca = this.computeAngles(front.vertices);
+          this.heap = new WebHF.Heap("all");
+          for (let i = 0, len = ca.angles.length; i < len; i++) {
+            const angle = ca.angles[i];
+            this.heap.insert(angle.degree, angle);
+          }
+          this.heap.sort();
+        },
+        mergeByDistance(front, filling, v, ignore) {
+          if (!v) {
+            return true;
+          }
+          let vIndex = filling.vertices.indexOf(v);
+          if (vIndex < 0) {
+            console.error("mergeByDistance: Given vertex not part of filling!");
+            return false;
+          }
+          const vIndexFront = front.vertices.indexOf(v);
+          let vIndexBefore = vIndexFront - 1;
+          let vIndexAfter = vIndexFront + 1;
+          if (vIndexBefore < 0) {
+            vIndexBefore = front.vertices.length - 1;
+          }
+          if (vIndexAfter > front.vertices.length - 1) {
+            vIndexAfter = 0;
+          }
+          var compare = [
+            front.vertices[vIndexBefore],
+            front.vertices[vIndexAfter],
+          ];
+          for (let i = 0; i < compare.length; i++) {
+            const t = compare[i];
+            if (ignore.indexOf(t) >= 0) {
+              continue;
+            }
+            if (v.distanceTo(t) <= this.mergeThreshold) {
+              if (CONFIG.DEBUG.SHOW_MERGING) {
+                WebHF.SceneManager.scene.add(
+                  WebHF.SceneManager.createPoint(t, 0.02, 0xffee00, true)
+                );
+                WebHF.SceneManager.scene.add(
+                  WebHF.SceneManager.createPoint(v, 0.012, 0xffee00, true)
+                );
+                WebHF.SceneManager.scene.add(
+                  WebHF.SceneManager.createLine(t, v, 1, 0xffee00, true)
+                );
+              }
+              const tIndex = filling.vertices.indexOf(t);
+              vIndex = filling.vertices.indexOf(v);
+              filling.vertices.splice(tIndex, 1);
+              this.updateFaces(filling, tIndex, vIndex);
+              this.mergeUpdateFront(front, t, v);
+              this.heapMergeVertex(t, v);
+            }
+          }
+        },
+        mergeUpdateFront(front, vOld, vNew) {
+          const ixFrom = front.vertices.indexOf(vOld);
+          const ixTo = front.vertices.indexOf(vNew);
+          if (ixFrom < 0 || ixTo < 0) {
+            throw new Error("Vertex not found in front.");
+          }
+          front.vertices.splice(ixFrom, 1);
+        },
+        rule2Calc(vp, v, vn) {
+          const vpClone = vp.clone().sub(v);
+          const vnClone = vn.clone().sub(v);
+          const origin = new THREE.Vector3();
+          const plane = new WebHF.Plane(origin, vpClone, vnClone);
+          const vNew = plane.getPoint(1, 1);
+          const avLen = WebHF.Utils.getAverageLength([vpClone, vnClone]);
+          vNew.setLength(avLen);
+          vNew.add(v);
+          return vNew;
+        },
+        rule3Calc(vp, v, vn, angle) {
+          const vnClone = vn.clone().sub(v);
+          const vpClone = vp.clone().sub(v);
+          const c = vnClone.clone().cross(vpClone).normalize();
+          const c2 = c.clone().cross(vnClone).normalize().add(v);
+          const plane = new WebHF.Plane(
+            new THREE.Vector3(),
+            vnClone,
+            c2.clone().sub(v)
+          );
+          let vNew = plane.getPoint(1, 1);
+          vNew.setLength(vnClone.length());
+          vNew.add(v);
+          vNew = WebHF.Utils.keepNearPlane(
+            vNew,
+            [vp, v, vn],
+            this.mergeThreshold
+          );
+          return vNew;
+        },
+        setCollisionTest(mode) {
+          this.collisionTestMode = mode;
+        },
+        updateFaces(filling, oldIndex, newIndex) {
+          for (let i = filling.faces.length - 1; i >= 0; i--) {
+            const face = filling.faces[i];
+            if (face.a == oldIndex) {
+              face.a = newIndex;
+            }
+            if (face.b == oldIndex) {
+              face.b = newIndex;
+            }
+            if (face.c == oldIndex) {
+              face.c = newIndex;
+            }
+            filling.faces = WebHF.Utils.decreaseHigherFaceIndexes(
+              filling.faces,
+              i,
+              oldIndex
+            );
+          }
+        },
+        wrapUp(front, filling) {
+          console.log(
+            "Finished after " + (this.loopCounter - 1) + " iterations.\n",
+            "- New vertices: " + filling.vertices.length + "\n",
+            "- New faces: " + filling.faces.length
+          );
+          WebHF.SceneManager.showFilling(front, filling, this.holeIndex);
+          this.callback(filling, this.holeIndex);
+        },
+      };
+      {
+        const AdvancingFront = WebHF.AdvancingFront;
+        AdvancingFront.mode = "iterative";
+        AdvancingFront.applyRule1 = function (front, filling, angle) {
+          const vp = angle.vertices[0];
+          const v = angle.vertices[1];
+          const vn = angle.vertices[2];
+          const vNew = this.rule1(front, filling, vp, v, vn);
+          if (vNew) {
+            const angleNext = angle.next;
+            const anglePrev = angle.previous;
+            this.heap.remove(anglePrev.degree);
+            this.heap.remove(angleNext.degree);
+            anglePrev.setVertices([
+              anglePrev.vertices[0],
+              anglePrev.vertices[1],
+              vn,
+            ]);
+            anglePrev.next = angleNext;
+            angleNext.setVertices([
+              vp,
+              angleNext.vertices[1],
+              angleNext.vertices[2],
+            ]);
+            angleNext.previous = anglePrev;
+            this.heap.insert(anglePrev.degree, anglePrev);
+            this.heap.insert(angleNext.degree, angleNext);
+          } else {
+            angle.waitForUpdate = true;
+            this.heap.insert(angle.degree, angle);
+          }
+          return false;
+        };
+        AdvancingFront.applyRule2 = function (front, filling, angle) {
+          const vp = angle.vertices[0];
+          const v = angle.vertices[1];
+          const vn = angle.vertices[2];
+          const vNew = this.rule2(front, filling, vp, v, vn);
+          if (vNew) {
+            const angleNext = angle.next;
+            const anglePrev = angle.previous;
+            angle.setVertices([vp, vNew, vn]);
+            this.heap.remove(anglePrev.degree);
+            this.heap.remove(angleNext.degree);
+            anglePrev.setVertices([
+              anglePrev.vertices[0],
+              anglePrev.vertices[1],
+              vNew,
+            ]);
+            angleNext.setVertices([
+              vNew,
+              angleNext.vertices[1],
+              angleNext.vertices[2],
+            ]);
+            this.heap.insert(anglePrev.degree, anglePrev);
+            this.heap.insert(angleNext.degree, angleNext);
+          } else {
+            angle.waitForUpdate = true;
+          }
+          this.heap.insert(angle.degree, angle);
+          return vNew;
+        };
+        AdvancingFront.applyRule3 = function (front, filling, angle) {
+          const vp = angle.vertices[0];
+          const v = angle.vertices[1];
+          const vn = angle.vertices[2];
+          const vNew = this.rule3(front, filling, vp, v, vn, angle);
+          if (vNew) {
+            const angleNext = angle.next;
+            const anglePrev = angle.previous;
+            const newAngle = new WebHF.Angle([v, vNew, vn]);
+            this.heap.remove(angleNext.degree);
+            newAngle.previous = angle;
+            newAngle.next = angleNext;
+            angle.setVertices([vp, v, vNew]);
+            angle.next = newAngle;
+            angleNext.setVertices([
+              vNew,
+              angleNext.vertices[1],
+              angleNext.vertices[2],
+            ]);
+            angleNext.previous = newAngle;
+            this.heap.insert(newAngle.degree, newAngle);
+            this.heap.insert(angleNext.degree, angleNext);
+          } else {
+            angle.waitForUpdate = true;
+          }
+          this.heap.insert(angle.degree, angle);
+          return vNew;
+        };
+        AdvancingFront.collisionTest = function (
+          front,
+          filling,
+          v,
+          fromA,
+          fromB
+        ) {
+          for (let i = 0, len = filling.faces.length; i < len; i++) {
+            const face = filling.faces[i];
+            const a = filling.vertices[face.a];
+            const b = filling.vertices[face.b];
+            const c = filling.vertices[face.c];
+            if (a.equals(v) || b.equals(v) || c.equals(v)) {
+              continue;
+            }
+            if (a.equals(fromA) || b.equals(fromA) || c.equals(fromA)) {
+              continue;
+            }
+            if (fromB) {
+              if (a.equals(fromB) || b.equals(fromB) || c.equals(fromB)) {
+                continue;
+              }
+            }
+            if (
+              WebHF.Utils.checkIntersectionOfTriangles3D(
+                a,
+                b,
+                c,
+                v,
+                fromA,
+                fromB
+              )
+            ) {
+              return true;
+            }
+          }
+          if (this.collisionTestMode === "all") {
+            for (let i = 0, len = this.modelGeo.faces.length; i < len; i++) {
+              const face = this.modelGeo.faces[i];
+              const a = this.modelGeo.vertices[face.a];
+              const b = this.modelGeo.vertices[face.b];
+              const c = this.modelGeo.vertices[face.c];
+              if (a.equals(v) || b.equals(v) || c.equals(v)) {
+                continue;
+              }
+              if (a.equals(fromA) || b.equals(fromA) || c.equals(fromA)) {
+                continue;
+              }
+              if (fromB) {
+                if (a.equals(fromB) || b.equals(fromB) || c.equals(fromB)) {
+                  continue;
+                }
+              }
+              if (
+                WebHF.Utils.checkIntersectionOfTriangles3D(
+                  a,
+                  b,
+                  c,
+                  v,
+                  fromA,
+                  fromB
+                )
+              ) {
+                return true;
+              }
+            }
+          }
+          return false;
+        };
+        AdvancingFront.getRuleFunctionForAngle = function (degree) {
+          if (degree <= 75.0) {
+            return this.applyRule1.bind(this);
+          } else if (degree <= 135.0) {
+            return this.applyRule2.bind(this);
+          } else if (degree > 135.0) {
+            return this.applyRule3.bind(this);
+          }
+          return false;
+        };
+        AdvancingFront.rule1 = function (front, filling, vp, v, vn) {
+          const vIndexFront = front.vertices.indexOf(v);
+          const vIndexFilling = filling.vertices.indexOf(v);
+          const vnIndexFilling = filling.vertices.indexOf(vn);
+          const vpIndexFilling = filling.vertices.indexOf(vp);
+          if (this.collisionTest(front, filling, vp, vn)) {
+            return false;
+          }
+          filling.faces.push(
+            new THREE.Face3(vIndexFilling, vpIndexFilling, vnIndexFilling)
+          );
+          front.vertices.splice(vIndexFront, 1);
+          return true;
+        };
+        AdvancingFront.rule2 = function (front, filling, vp, v, vn) {
+          const vNew = this.rule2Calc(vp, v, vn);
+          if (this.collisionTest(front, filling, vNew, vp, vn)) {
+            return false;
+          }
+          filling.vertices.push(vNew);
+          const len = filling.vertices.length;
+          const vIndexFront = front.vertices.indexOf(v);
+          const vpIndexFilling = filling.vertices.indexOf(vp);
+          const vIndexFilling = filling.vertices.indexOf(v);
+          const vnIndexFilling = filling.vertices.indexOf(vn);
+          filling.faces.push(
+            new THREE.Face3(vIndexFilling, vpIndexFilling, len - 1)
+          );
+          filling.faces.push(
+            new THREE.Face3(vIndexFilling, len - 1, vnIndexFilling)
+          );
+          front.vertices[vIndexFront] = vNew;
+          return vNew;
+        };
+        AdvancingFront.rule3 = function (front, filling, vp, v, vn, angle) {
+          const vNew = this.rule3Calc(vp, v, vn, angle);
+          if (this.collisionTest(front, filling, vNew, vp, vn)) {
+            return false;
+          }
+          filling.vertices.push(vNew);
+          const len = filling.vertices.length;
+          const vIndexFront = front.vertices.indexOf(v);
+          const vnIndexFilling = filling.vertices.indexOf(vn);
+          const vIndexFilling = filling.vertices.indexOf(v);
+          filling.faces.push(
+            new THREE.Face3(vnIndexFilling, vIndexFilling, len - 1)
+          );
+          front.vertices.splice(vIndexFront + 1, 0, vNew);
+          return vNew;
+        };
+        AdvancingFront.start = function (
+          modelGeo,
+          hole,
+          mergeThreshold,
+          callback
+        ) {
+          const front = new THREE.Geometry();
+          let filling = new THREE.Geometry();
+          this.callback = callback;
+          this.hole = hole;
+          this.holeIndex = WebHF.SceneManager.holes.indexOf(this.hole);
+          this.loopCounter = 0;
+          this.mergeThreshold = mergeThreshold;
+          this.modelGeo = modelGeo;
+          front.vertices = this.hole.slice(0);
+          filling.vertices = this.hole.slice(0);
+          front.mergeVertices();
+          filling.mergeVertices();
+          this.initHeap(front);
+          while (true) {
+            this.loopCounter++;
+            if (
+              this.STOP_AFTER !== false &&
+              this.loopCounter > this.STOP_AFTER
+            ) {
+              break;
+            }
+            if (front.vertices.length == 4) {
+              filling = this.closeHole4(front, filling);
+              break;
+            } else if (front.vertices.length == 3) {
+              filling = this.closeHole3(front, filling);
+              break;
+            } else if (front.vertices.length == 2) {
+              console.warn("front.vertices.length == 2");
+              break;
+            } else if (front.vertices.length == 1) {
+              console.warn("front.vertices.length == 1");
+              break;
+            }
+            let vNew = null;
+            if (this.heap.size() > 0) {
+              const angle = this.getNextAngle();
+              const ruleFunc = this.getRuleFunctionForAngle(angle.degree);
+              if (ruleFunc === false) {
+                WebHF.SceneManager.showFilling(front, filling);
+                throw new Error(
+                  "No rule could be applied. Stopping before entering endless loop."
+                );
+              }
+              vNew = ruleFunc(front, filling, angle);
+              this.heap.sort();
+            } else {
+              WebHF.SceneManager.showFilling(front, filling);
+              throw new Error(
+                "Hole has not been filled yet, but heap is empty."
+              );
+            }
+            if (!vNew || front.vertices.length != 3) {
+              this.mergeByDistance(front, filling, vNew, this.hole);
+            }
+          }
+          this.wrapUp(front, filling);
+        };
+      }
+    </script>
+    <script>
+      "use strict";
+      {
+        class Plane {
+          constructor(p, v1, v2) {
+            this.p = p.clone();
+            this.v1 = v1.clone();
+            this.v2 = v2.clone();
+            this.normal = new THREE.Vector3().crossVectors(
+              this.v1.clone().sub(this.p),
+              this.v2.clone().sub(this.p)
+            );
+            this.normal.normalize();
+          }
+          getPoint(s, t) {
+            const v1s = this.v1.clone().sub(this.p).multiplyScalar(s);
+            const v2t = this.v2.clone().sub(this.p).multiplyScalar(t);
+            return this.p.clone().add(v1s).add(v2t);
+          }
+          getIntersection(v0, v1) {
+            const vStart = v0.clone();
+            const vEnd = v1.clone();
+            const numerator = this.normal.dot(this.p.clone().sub(vStart));
+            const denumerator = this.normal.dot(vEnd.clone().sub(vStart));
+            if (denumerator == 0) {
+              return false;
+            }
+            const r = numerator / denumerator;
+            if (r < 0 || r > 1) {
+              return false;
+            }
+            return v0.clone().add(v1.clone().sub(v0).multiplyScalar(r));
+          }
+        }
+        WebHF.Plane = Plane;
+      }
+      ("use strict");
+      {
+        class Heap {
+          constructor(identifier) {
+            this.identifier = identifier || "none";
+            this.indexes = [];
+            this.values = {};
+          }
+          get(key) {
+            if (!this.values.hasOwnProperty(key)) {
+              throw new Error("No entry found for " + key);
+            }
+            return this.values[key][0];
+          }
+          insert(key, value) {
+            this.indexes.push(key);
+            if (!this.values.hasOwnProperty(key)) {
+              this.values[key] = [];
+            }
+            this.values[key].push(value);
+          }
+          remove(key) {
+            const ix = this.indexes.indexOf(key);
+            if (ix >= 0) {
+              this.indexes.splice(ix, 1);
+            }
+            this.values[key].splice(0, 1);
+            if (this.values[key].length === 0) {
+              delete this.values[key];
+            }
+          }
+          removeFirst() {
+            const value = this.values[this.indexes[0]][0];
+            this.remove(this.indexes[0]);
+            return value;
+          }
+          size() {
+            return this.indexes.length;
+          }
+          sort() {
+            this.indexes.sort((a, b) => a - b);
+          }
+        }
+        WebHF.Heap = Heap;
+      }
+      ("use strict");
+      {
+        class Angle {
+          constructor(vertices, position) {
+            this.degree = null;
+            this.vertices = vertices;
+            this.next = null;
+            this.previous = null;
+            this.waitForUpdate = false;
+            if (typeof position === "undefined") {
+              this.position = WebHF.SceneManager.model.position;
+            } else {
+              this.position = position;
+            }
+            this.calculateAngle();
+          }
+          calculateAngle() {
+            this.degree = WebHF.Utils.calculateAngle(
+              this.vertices[0],
+              this.vertices[1],
+              this.vertices[2],
+              this.position
+            );
+            this.waitForUpdate = false;
+            return this.degree;
+          }
+          setVertices(vertices) {
+            this.vertices = vertices;
+            return this.calculateAngle();
+          }
+        }
+        WebHF.Angle = Angle;
+      }
+    </script>
+    <script>
+      "use strict";
+      {
+        class Edge {
+          constructor(vertex, q, face) {
+            this.vertex = vertex;
+            this.q = q;
+            this.next = null;
+            this.pair = null;
+            this.face = face;
+            this.prev = null;
+          }
+          isBorderEdge() {
+            return this.pair === null;
+          }
+        }
+        WebHF.Edge = Edge;
+      }
+      ("use strict");
+      {
+        class HalfEdgeMesh {
+          constructor(data) {
+            this.data = data;
+            this.edges = [];
+            this.vertices = [];
+            this.borderEdges = [];
+            this.buildMesh();
+          }
+          buildMesh() {
+            const faces = this.data.faces;
+            const tempList = [];
+            for (let i = 0; i < this.data.vertices.length; i++) {
+              this.vertices[i] = new WebHF.Vertex(i);
+              tempList[i] = [];
+            }
+            for (let f = 0; f < this.data.faces.length; f++) {
+              this.edges[f] = [];
+            }
+            for (let l = 0; l < faces.length; l++) {
+              this.createEdges(faces[l], l);
+              const faceArr = [faces[l].a, faces[l].b, faces[l].c];
+              for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                  if (faceArr[i] < faceArr[j]) {
+                    tempList[faceArr[i]].push([faceArr[j], l]);
+                  }
+                }
+              }
+            }
+            this.findAdjacency(tempList);
+            this.setFirstEdges();
+            for (let i = 0; i < tempList.length; i++) {
+              for (let j = 0; j < tempList[i].length; j++) {
+                const v = tempList[i][j];
+                if (v[0] >= 0) {
+                  const borderEdge = [parseInt(i, 10), v[0]];
+                  this.borderEdges.push(borderEdge);
+                }
+              }
+            }
+          }
+          connectEdges(v1, v2, f1, f2) {
+            let p1 = null;
+            let p2 = null;
+            for (let i = 0; i < this.edges[f1].length; i++) {
+              const e = this.edges[f1][i];
+              if (
+                Math.min(e.vertex.index, e.q.index) === Math.min(v2, v1) &&
+                Math.max(e.vertex.index, e.q.index) === Math.max(v2, v1)
+              ) {
+                p1 = e;
+              }
+            }
+            for (let i = 0; i < this.edges[f2].length; i++) {
+              const e = this.edges[f2][i];
+              if (
+                Math.min(e.vertex.index, e.q.index) === Math.min(v2, v1) &&
+                Math.max(e.vertex.index, e.q.index) === Math.max(v2, v1)
+              ) {
+                p2 = e;
+              }
+            }
+            p1.pair = p2;
+            p2.pair = p1;
+          }
+          createEdges(face, faceIndex) {
+            const faceArr = [face.a, face.b, face.c];
+            const firstEdge = new WebHF.Edge(
+              this.vertices[face.b],
+              this.vertices[face.a],
+              faceIndex
+            );
+            let previous = firstEdge;
+            this.vertices[face.a].edges.push(firstEdge);
+            for (let i = 1; i < 3; i++) {
+              const ix = (i + 1) % 3;
+              const current = new WebHF.Edge(
+                this.vertices[faceArr[ix]],
+                this.vertices[faceArr[i]],
+                faceIndex
+              );
+              this.vertices[faceArr[i]].edges.push(current);
+              previous.next = current;
+              this.edges[faceIndex].push(previous);
+              previous = current;
+            }
+            previous.next = firstEdge;
+            this.edges[faceIndex].push(previous);
+          }
+          findAdjacency(tempList) {
+            for (let i = 0; i < tempList.length; i++) {
+              for (let j = 0; j < tempList[i].length; j++) {
+                const v1 = tempList[i][j];
+                for (let k = 0; k < tempList[i].length; k++) {
+                  const v2 = tempList[i][k];
+                  if (
+                    v1[0] > 0 &&
+                    v2[0] > 0 &&
+                    v1[0] == v2[0] &&
+                    v1[1] != v2[1]
+                  ) {
+                    this.connectEdges(i, v1[0], v1[1], v2[1]);
+                    v1[0] = -1;
+                    v2[0] = -1;
+                  }
+                }
+              }
+            }
+          }
+          setFirstEdges() {
+            for (let i = 0; i < this.vertices.length; i++) {
+              this.vertices[i].setUpFirstEdge();
+            }
+          }
+        }
+        WebHF.HalfEdgeMesh = HalfEdgeMesh;
+      }
+      ("use strict");
+      {
+        class Vertex {
+          constructor(index) {
+            this.index = index;
+            this.edges = [];
+            this.firstEdge = null;
+          }
+          setUpFirstEdge() {
+            for (let i = 0; i < this.edges.length; i++) {
+              const edge = this.edges[i];
+              if (edge.pair === null) {
+                this.firstEdge = edge;
+                return;
+              }
+            }
+            if (this.edges.length > 0) {
+              this.firstEdge = this.edges[0];
+            }
+          }
+          isBorderPoint() {
+            if (this.edges.length > 0) {
+              return this.firstEdge.pair === null;
+            }
+            return true;
+          }
+          isMultiBorderPoint() {
+            let count = 0;
+            for (let i = 0; i < this.edges.length; i++) {
+              if (this.edges[i].isBorderEdge()) {
+                count++;
+              }
+            }
+            return count >= 2;
+          }
+          getNeighbours() {
+            const neighbours = [];
+            if (this.edges.length > 0) {
+              if (this.firstEdge.pair === null) {
+                let next = this.firstEdge.next;
+                neighbours.push(this.firstEdge.vertex.index);
+                neighbours.push(next.vertex.index);
+                if (next.next.pair === null) {
+                  return neighbours;
+                } else {
+                  next = next.next.pair;
+                }
+                while (next !== null) {
+                  neighbours.push(next.vertex.index);
+                  next = next.next;
+                  neighbours.push(next.vertex.index);
+                  next = next.next.pair;
+                }
+              } else {
+                let next = this.firstEdge.pair.next;
+                neighbours.push(this.firstEdge.vertex.index);
+                while (next != this.firstEdge && next.pair !== null) {
+                  neighbours.push(next.vertex.index);
+                  next = next.pair.next;
+                }
+              }
+            }
+            return neighbours;
+          }
+        }
+        WebHF.Vertex = Vertex;
+      }
+    </script>
+  </body>
+</html>
